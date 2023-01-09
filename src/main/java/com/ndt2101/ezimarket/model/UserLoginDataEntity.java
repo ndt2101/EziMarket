@@ -10,6 +10,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Table(name = "LoginData")
@@ -43,4 +44,17 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @ManyToOne
     @JoinColumn(name = "emailValidationStatusId")
     private EmailValidationStatusEntity emailValidationStatus;
+
+    @OneToOne(mappedBy = "userLoginData")
+    private ShopEntity shop;
+
+    @OneToMany(mappedBy = "to")
+    private List<FollowerEntity> followers;
+
+    @OneToMany(mappedBy = "from")
+    private List<FollowerEntity> followings;
+
+    @OneToOne(orphanRemoval = true)
+    @JoinColumn(name = "address_id")
+    private AddressEntity address;
 }

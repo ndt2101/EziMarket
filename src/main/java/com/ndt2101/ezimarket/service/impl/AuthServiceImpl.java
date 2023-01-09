@@ -121,7 +121,6 @@ public class AuthServiceImpl implements AuthService {
         FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
         if (decodedToken != null) {
             String email = decodedToken.getEmail();
-            log.info("email", email);
             Optional<UserLoginDataEntity> userLoginDataOptional = userRepository.findByEmailAddress(email);
             UserLoginDataEntity userLoginData;
             if (userLoginDataOptional.isPresent()) {
@@ -141,6 +140,7 @@ public class AuthServiceImpl implements AuthService {
                         .emailAddress(email)
                         .confirmationToken(verifiedToken)
                         .confirmationTokenGeneratedTime(time)
+                        .avatarUrl(decodedToken.getPicture())
                         .emailValidationStatus(emailStatusRepository.findByStatusDescription("valid")
                                 .orElseThrow(() -> new ApplicationException(HttpStatus.NOT_FOUND, "Email status not found!")))
                         .build();
