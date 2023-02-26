@@ -2,6 +2,9 @@ package com.ndt2101.ezimarket.base;
 
 import com.ndt2101.ezimarket.constant.Common;
 import com.ndt2101.ezimarket.dto.ResponseDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginationDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginationResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -33,5 +36,15 @@ public class BaseController<T> {
         Map<String, List<T>> result = new HashMap<>();
 //        result.put("error", metaError);
         return ResponseEntity.status(httpStatus).body(new ResponseDTO<>(httpStatus.value(), Common.UNSUCCESSFUL_RESPONSE, metaError));
+    }
+
+    public ResponseEntity<?> resPagination(PaginateDTO<?> paginateDTO) {
+        PaginationDTO<List<?>> paginationDTO = new PaginationDTO<>(
+                paginateDTO.getPageData().getContent(),
+                paginateDTO.getPagination()
+        );
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new PaginationResponseDTO<>(HttpStatus.OK.value(), Common.SUCCESSFUL_RESPONSE, paginationDTO)
+        );
     }
 }

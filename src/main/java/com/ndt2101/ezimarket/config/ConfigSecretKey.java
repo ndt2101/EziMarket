@@ -25,7 +25,7 @@ public class ConfigSecretKey {
     }
 
     @Bean
-    public void firebaseConfig() throws IOException {
+    public FirebaseApp firebaseConfig() throws IOException {
 
         FileInputStream serviceAccount =
                 new FileInputStream("src/main/resources/ezi-market-firebase-adminsdk-18xex-fa8c704037.json");
@@ -33,9 +33,9 @@ public class ConfigSecretKey {
         FirebaseOptions options = new FirebaseOptions.Builder()
                 .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                 .setDatabaseUrl("https://ezi-market-default-rtdb.asia-southeast1.firebasedatabase.app")
+                .setStorageBucket("ezi-market.appspot.com")
                 .build();
 
-        FirebaseApp.initializeApp(options);
-
+        return FirebaseApp.initializeApp(options);
     }
 }

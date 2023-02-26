@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "Shop")
@@ -29,4 +30,6 @@ public class ShopEntity extends BaseEntity {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserLoginDataEntity userLoginData;
 
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<ProductEntity> productEntities;
 }

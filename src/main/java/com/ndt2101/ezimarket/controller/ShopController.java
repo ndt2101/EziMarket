@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/shop")
 public class ShopController extends BaseController<Object> {
-
     @Autowired
     private JwtUtils jwtUtils;
     @Autowired

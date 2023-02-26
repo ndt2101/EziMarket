@@ -19,11 +19,4 @@ public class UserSpecificationBuilder {
         params.add(searchCriteria);
         return this;
     }
-
-//    public Specification<UserLoginDataEntity> build() {
-//        if (params.size() == 0) {
-//            return null;
-//        }
-//
-//    }
 }
