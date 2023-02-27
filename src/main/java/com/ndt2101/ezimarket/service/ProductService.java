@@ -1,6 +1,7 @@
 package com.ndt2101.ezimarket.service;
 
 import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
+import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -12,4 +13,8 @@ public interface ProductService {
     List<ProductDTO> fuzzySearch(String value) throws IOException;
 
     String update(ProductPayLoadDTO productPayLoad, Long productId);
+
+    String delete(Long productId);
+
+    ProductResponseDTO getProductDetail(Long productId);
 }

@@ -46,8 +46,7 @@ public class ProductEntity extends BaseEntity {
     private float height;
     @Column
     private float length;
-
-    @OneToMany(mappedBy = "product")
+    @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST,CascadeType.REMOVE}, fetch = FetchType.EAGER)
     private List<ProductTypeEntity> productTypes;
 
     @OneToMany(mappedBy = "product")

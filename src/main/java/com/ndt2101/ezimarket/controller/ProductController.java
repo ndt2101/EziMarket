@@ -26,4 +26,14 @@ public class ProductController extends BaseController<Object> {
     public ResponseEntity<?> updateProduct(@ModelAttribute ProductPayLoadDTO productPayLoad, @PathVariable Long id) {
         return successfulResponse(productService.update(productPayLoad, id));
     }
+
+    @DeleteMapping("{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable(name = "id") Long productId) {
+        return successfulResponse(productService.delete(productId));
+    }
+
+    @GetMapping("{id}")
+    public ResponseEntity<?> getProductDetail(@PathVariable(name = "id") Long productId) {
+        return successfulResponse(productService.getProductDetail(productId));
+    }
 }

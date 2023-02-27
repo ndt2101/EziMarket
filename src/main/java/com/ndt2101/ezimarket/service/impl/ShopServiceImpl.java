@@ -28,4 +28,5 @@ public class ShopServiceImpl implements ShopService {
         shopRepository.save(shopEntity);
         return "Register shop successfully";
     }
+
 }

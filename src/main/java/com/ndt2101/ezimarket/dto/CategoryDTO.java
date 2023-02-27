@@ -10,6 +10,7 @@ import lombok.*;
 @Builder
 public class CategoryDTO extends BaseDTO {
     private String title;
+    private Long parentId;
     private String image;
     private String coverImage;
 }

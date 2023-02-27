@@ -13,6 +13,7 @@ import com.google.cloud.storage.*;
 import com.google.firebase.cloud.StorageClient;
 import com.ndt2101.ezimarket.base.BaseDTO;
 import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
+import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.dto.product.ProductTypeDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.elasticsearch.elasticsearchrepository.ELSProductRepository;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.modelmapper.ModelMapper;
+import org.modelmapper.TypeMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -91,12 +93,38 @@ public class ProductServiceImpl implements ProductService {
                         .map(BaseDTO::getId)
                         .toList());
         productPayLoadDTO.getProductTypeDTOs().removeIf(productTypeDTO -> productTypeDTO.getType().isBlank());
+        deleteImage(productId, productPayLoadDTO.getShopId());
+        create(productPayLoadDTO);
+        return "Update product successfully";
+    }
+
+    @Override
+    public String delete(Long productId) {
+        ProductEntity productEntity = productRepository.findById(productId).orElseThrow(() -> new NotFoundException("Product not found"));
+        Long shopId = productEntity.getShop().getId();
+        deleteImage(productId, shopId);
+        productRepository.delete(productEntity);
+        return "Delete product successfully";
+    }
+
+    @Override
+    public ProductResponseDTO getProductDetail(Long productId) {
+        ProductEntity productEntity = productRepository.findById(productId).orElseThrow(() -> new NotFoundException("Product not found"));
+        TypeMap<ProductEntity, ProductResponseDTO> propertyMapper = mapper.createTypeMap(ProductEntity.class, ProductResponseDTO.class);
+        propertyMapper.addMappings(mapper -> mapper.skip(ProductResponseDTO::setImages));
+        ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
+        productResponse.setImages(productEntity.getImageEntities().stream().map(ImageEntity::getUrl).toList());
+        productResponse.getShop().setAvatar(productEntity.getShop().getUserLoginData().getAvatarUrl());
+        return productResponse;
+    }
+
+    private void deleteImage(Long productId, Long shopId) {
         List<ImageEntity> deletedImages = imageRepository.findByProduct(
-                        productRepository.findById(productId)
-                                .orElseThrow(() -> new NotFoundException("Product not found")));
+                productRepository.findById(productId)
+                        .orElseThrow(() -> new NotFoundException("Product not found")));
         deletedImages
                 .forEach(imageEntity -> {
-                    BlobId blobId = BlobId.of("ezi-market.appspot.com", "images/" +  productPayLoadDTO.getShopId() + "/" + productId + "/" + imageEntity.getName());
+                    BlobId blobId = BlobId.of("ezi-market.appspot.com", "images/" +  shopId + "/" + productId + "/" + imageEntity.getName());
                     Credentials credentials = null;
                     try {
                         credentials = GoogleCredentials.fromStream(new FileInputStream("src/main/resources/ezi-market-firebase-adminsdk-18xex-fa8c704037.json"));
@@ -108,9 +136,8 @@ public class ProductServiceImpl implements ProductService {
                     log.info("delete image" + imageEntity.getName() + ": {}", result);
                 });
         imageRepository.deleteAll(deletedImages);
-        create(productPayLoadDTO);
-        return "Update product successfully";
     }
+
     @Override
     public String create(ProductPayLoadDTO productPayLoad) {
         CategoryEntity categoryEntity = categoryRepository.findById(productPayLoad.getCategoryId()).orElseThrow(() -> new NotFoundException("Category with id " + productPayLoad.getCategoryId() + " not found!"));
