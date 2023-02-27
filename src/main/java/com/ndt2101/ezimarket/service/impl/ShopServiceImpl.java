@@ -9,6 +9,7 @@ import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.service.ShopService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,6 +28,14 @@ public class ShopServiceImpl implements ShopService {
         shopEntity.setUserLoginData(userLoginData);
         shopRepository.save(shopEntity);
         return "Register shop successfully";
+    }
+
+    @Override
+    public ShopDTO getShop(Specification<ShopEntity> specification) {
+        ShopEntity shopEntity = shopRepository.findOne(specification).orElseThrow(() -> new NotFoundException("Shop not found"));
+        ShopDTO shopDTO = mapper.map(shopEntity, ShopDTO.class);
+        shopDTO.setAvatar(shopEntity.getUserLoginData().getAvatarUrl());
+        return shopDTO;
     }
 
 }
