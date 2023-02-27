@@ -7,3 +7,8 @@
 -- insert into email_validation_status (created_by, created_time, status_description) values (1, now(), 'valid');
 --
 -- insert into email_validation_status (created_by, created_time, status_description) values (2, now(), 'invalid')
+-- INSERT INTO `role` (created_by, created_time, description) VALUES (1, now(), 'ROLE_SHOP');
+-- insert into permission (created_by, created_time, description) values (1, now() , 'WRITE_PERMISSION');
+--
+-- insert into granted_permission (role_id, permission_id) values (3, 2);
+-- insert into granted_permission (role_id, permission_id) values (3, 1);

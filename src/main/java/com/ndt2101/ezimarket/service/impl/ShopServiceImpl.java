@@ -4,6 +4,7 @@ import com.ndt2101.ezimarket.dto.ShopDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
 import com.ndt2101.ezimarket.model.ShopEntity;
 import com.ndt2101.ezimarket.model.UserLoginDataEntity;
+import com.ndt2101.ezimarket.repository.RoleRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
 import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.service.ShopService;
@@ -21,9 +22,13 @@ public class ShopServiceImpl implements ShopService {
     private ModelMapper mapper;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private RoleRepository roleRepository;
     @Override
     public String register(ShopDTO shopDTO, String loginName) {
         UserLoginDataEntity userLoginData = userRepository.findByLoginName(loginName).orElseThrow(() -> new NotFoundException("User " + loginName + " not found"));
+        userLoginData.setRole(roleRepository.getByDescription("ROLE_SHOP")
+                .orElseThrow(() -> new NotFoundException("Role shop not found")));
         ShopEntity shopEntity = mapper.map(shopDTO, ShopEntity.class);
         shopEntity.setUserLoginData(userLoginData);
         shopRepository.save(shopEntity);
