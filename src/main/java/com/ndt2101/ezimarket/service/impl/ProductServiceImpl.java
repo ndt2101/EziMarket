@@ -120,12 +120,16 @@ public class ProductServiceImpl implements ProductService {
         ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
         if (saleProgram != null) {
             if (saleProgram.getEndTime() < System.currentTimeMillis()) {
-                productEntity.setSaleProgram(null);
-                productRepository.save(productEntity);
+                List<ProductEntity> productEntities = saleProgram.getProducts()
+                        .stream().map(product -> {
+                            product.setSaleProgram(null);
+                            return product;
+                        }).toList();
+                productRepository.saveAll(productEntities);
                 saleProgramRepository.delete(saleProgram);
             } else {
                 productResponse.getProductTypes().forEach(productTypeDTO -> {
-                    productTypeDTO.setDiscountPrice(Math.round(productTypeDTO.getPrice() * (double) saleProgram.getDiscount()));
+                    productTypeDTO.setDiscountPrice(productTypeDTO.getPrice() - Math.round(productTypeDTO.getPrice() * (double) saleProgram.getDiscount()));
                 });
             }
         }

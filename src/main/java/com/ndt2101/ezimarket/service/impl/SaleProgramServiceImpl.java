@@ -21,7 +21,11 @@ import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import java.sql.Date;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class SaleProgramServiceImpl implements SaleProgramService {
@@ -48,13 +52,48 @@ public class SaleProgramServiceImpl implements SaleProgramService {
         ShopEntity shopEntity = shopRepository.findById(saleProgramDTO.getShopId()).orElseThrow(() -> new NotFoundException("Shop not found"));
 
         SaleProgramEntity saleProgramEntity = mapper.map(saleProgramDTO, SaleProgramEntity.class);
+
+        productEntities.forEach(productEntity -> productEntity.setSaleProgram(saleProgramEntity));
+
         saleProgramEntity.setShop(shopEntity);
         saleProgramEntity.setProducts(productEntities);
 
         SaleProgramEntity savedSaleProgram = saleProgramRepository.save(saleProgramEntity);
-        productEntities.forEach(productEntity -> productEntity.setSaleProgram(savedSaleProgram));
-        productRepository.saveAll(productEntities);
         return "Create sale program successfully";
+    }
+
+    @Override
+    public String update(SaleProgramDTO saleProgramDTO, Long id) {
+        List<Long> productIds = saleProgramDTO.getProducts().stream().map(ProductResponseDTO::getId).toList();
+        List<ProductEntity> productEntities = productRepository.findAllById(productIds);
+
+        ShopEntity shopEntity = shopRepository.findById(saleProgramDTO.getShopId()).orElseThrow(() -> new NotFoundException("Shop not found"));
+
+        SaleProgramEntity current = saleProgramRepository.findById(id).orElseThrow(() -> new NotFoundException("Sale program not found"));
+        Set<ProductEntity> currentProducts = new HashSet<>(current.getProducts());
+        List<ProductEntity> updateProducts = new ArrayList<>(productEntities.stream().toList());
+
+        productEntities.forEach(productEntity -> {
+            if (currentProducts.contains(productEntity)) {
+                updateProducts.remove(productEntity); // ket qua cuoi cung con nhung product can them vao chuong trinh
+                currentProducts.remove(productEntity); // ket qua cuoi cung con nhung product can xoa khoi chuong trinh
+            }
+        });
+
+        SaleProgramEntity updated = mapper.map(saleProgramDTO, SaleProgramEntity.class);
+
+        updateProducts.forEach(productEntity -> productEntity.setSaleProgram(updated));
+
+        updated.setShop(shopEntity);
+        updated.setProducts(updateProducts);
+        mapper.map(updated, current);
+        current.setUpdatedTime(new Date(System.currentTimeMillis()));
+
+        SaleProgramEntity savedSaleProgram = saleProgramRepository.save(current);
+
+        currentProducts.forEach(productEntity -> productEntity.setSaleProgram(null));
+        productRepository.saveAll(currentProducts);
+        return "Update sale program successfully";
     }
 
     @Scheduled(cron = "0 0 0 * * *")
