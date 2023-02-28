@@ -10,9 +10,6 @@ import javax.validation.constraints.Size;
 import java.sql.Date;
 
 @MappedSuperclass
-//@Entity
-//@Table(name = "UserAccount")
-//@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

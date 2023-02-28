@@ -36,6 +36,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,6 +61,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Autowired
     private ELSProductRepository elsProductRepository;
+    @Autowired
+    private SaleProgramRepository saleProgramRepository;
 
 
     // Create the low-level client
@@ -109,10 +112,23 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDTO getProductDetail(Long productId) {
+        SaleProgramEntity saleProgram;
         ProductEntity productEntity = productRepository.findById(productId).orElseThrow(() -> new NotFoundException("Product not found"));
-        TypeMap<ProductEntity, ProductResponseDTO> propertyMapper = mapper.createTypeMap(ProductEntity.class, ProductResponseDTO.class);
-        propertyMapper.addMappings(mapper -> mapper.skip(ProductResponseDTO::setImages));
+        saleProgram = productEntity.getSaleProgram();
+//        TypeMap<ProductEntity, ProductResponseDTO> propertyMapper = mapper.createTypeMap(ProductEntity.class, ProductResponseDTO.class);
+//        propertyMapper.addMappings(mapper -> mapper.skip(ProductResponseDTO::setImages));
         ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
+        if (saleProgram != null) {
+            if (saleProgram.getEndTime() < System.currentTimeMillis()) {
+                productEntity.setSaleProgram(null);
+                productRepository.save(productEntity);
+                saleProgramRepository.delete(saleProgram);
+            } else {
+                productResponse.getProductTypes().forEach(productTypeDTO -> {
+                    productTypeDTO.setDiscountPrice(Math.round(productTypeDTO.getPrice() * (double) saleProgram.getDiscount()));
+                });
+            }
+        }
         productResponse.setImages(productEntity.getImageEntities().stream().map(ImageEntity::getUrl).toList());
         productResponse.getShop().setAvatar(productEntity.getShop().getUserLoginData().getAvatarUrl());
         return productResponse;
@@ -124,7 +140,7 @@ public class ProductServiceImpl implements ProductService {
                         .orElseThrow(() -> new NotFoundException("Product not found")));
         deletedImages
                 .forEach(imageEntity -> {
-                    BlobId blobId = BlobId.of("ezi-market.appspot.com", "images/" +  shopId + "/" + productId + "/" + imageEntity.getName());
+                    BlobId blobId = BlobId.of("ezi-market.appspot.com", "images/" + shopId + "/" + productId + "/" + imageEntity.getName());
                     Credentials credentials = null;
                     try {
                         credentials = GoogleCredentials.fromStream(new FileInputStream("src/main/resources/ezi-market-firebase-adminsdk-18xex-fa8c704037.json"));
@@ -132,7 +148,7 @@ public class ProductServiceImpl implements ProductService {
                         throw new RuntimeException(e);
                     }
                     Storage storage = StorageOptions.newBuilder().setCredentials(credentials).build().getService();
-                    boolean result =  storage.delete(blobId);
+                    boolean result = storage.delete(blobId);
                     log.info("delete image" + imageEntity.getName() + ": {}", result);
                 });
         imageRepository.deleteAll(deletedImages);
@@ -146,6 +162,14 @@ public class ProductServiceImpl implements ProductService {
         ProductEntity productEntity = mapper.map(productPayLoad, ProductEntity.class);
         productEntity.setCategory(categoryEntity);
         productEntity.setShop(shopEntity);
+
+        if (productPayLoad.getId() != null) {
+            SaleProgramEntity saleProgram = productRepository.findById(productPayLoad.getId()).get().getSaleProgram();
+            if (saleProgram != null) {
+                productEntity.setSaleProgram(saleProgram);
+            }
+        }
+
         ProductEntity savedProductEntity = productRepository.save(productEntity);
         List<ProductTypeEntity> productTypeEntities = productPayLoad.getProductTypeDTOs().stream().map(productTypeDTO -> {
             ProductTypeEntity productTypeEntity = mapper.map(productTypeDTO, ProductTypeEntity.class);

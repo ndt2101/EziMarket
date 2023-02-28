@@ -48,7 +48,9 @@ public class ProductEntity extends BaseEntity {
     private float length;
     @OneToMany(mappedBy = "product", cascade = {CascadeType.PERSIST,CascadeType.REMOVE}, fetch = FetchType.EAGER)
     private List<ProductTypeEntity> productTypes;
-
     @OneToMany(mappedBy = "product")
     private List<ImageEntity> imageEntities;
+    @ManyToOne
+    @JoinColumn(name = "sale_program_id")
+    private SaleProgramEntity saleProgram;
 }

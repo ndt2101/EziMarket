@@ -15,8 +15,8 @@ import java.util.List;
 public class ProductPayLoadDTO extends BaseDTO {
     private String name;
     private String description;
-    private Long categoryId;
-    private Long shopId;
+    private Long categoryId;//
+    private Long shopId;//
     private List<ProductTypeDTO> productTypeDTOs;
     private String status;
     private Long view;
@@ -26,5 +26,5 @@ public class ProductPayLoadDTO extends BaseDTO {
     private float width;
     private float height;
     private float length;
-    private List<MultipartFile> images;
+    private List<MultipartFile> images;//
 }

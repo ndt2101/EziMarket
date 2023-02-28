@@ -3,8 +3,10 @@ package com.ndt2101.ezimarket;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 @EnableElasticsearchRepositories(basePackages = "com.ndt2101.ezimarket.elasticsearch.elasticsearchrepository")
 public class EziMarketApplication {
 

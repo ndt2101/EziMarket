@@ -16,7 +16,6 @@ import java.util.List;
 @Table(name = "LoginData")
 @NoArgsConstructor
 @AllArgsConstructor
-//@Data
 @Getter
 @Setter
 @SuperBuilder
