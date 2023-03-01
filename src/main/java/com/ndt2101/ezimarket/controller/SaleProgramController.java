@@ -22,4 +22,9 @@ public class SaleProgramController extends BaseController<Object> {
     public ResponseEntity<?> update(@PathVariable(name = "id") Long id, @RequestBody SaleProgramDTO saleProgramDTO) {
         return successfulResponse(saleProgramService.update(saleProgramDTO, id));
     }
+
+    @DeleteMapping("{id}")
+    public ResponseEntity<?> delete(@PathVariable(name = "id") Long saleProgramId) {
+        return successfulResponse(saleProgramService.delete(saleProgramId));
+    }
 }

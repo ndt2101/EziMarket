@@ -65,14 +65,13 @@ public class SaleProgramServiceImpl implements SaleProgramService {
     @Override
     public String update(SaleProgramDTO saleProgramDTO, Long id) {
         List<Long> productIds = saleProgramDTO.getProducts().stream().map(ProductResponseDTO::getId).toList();
+
         List<ProductEntity> productEntities = productRepository.findAllById(productIds);
-
         ShopEntity shopEntity = shopRepository.findById(saleProgramDTO.getShopId()).orElseThrow(() -> new NotFoundException("Shop not found"));
-
         SaleProgramEntity current = saleProgramRepository.findById(id).orElseThrow(() -> new NotFoundException("Sale program not found"));
+
         Set<ProductEntity> currentProducts = new HashSet<>(current.getProducts());
         List<ProductEntity> updateProducts = new ArrayList<>(productEntities.stream().toList());
-
         productEntities.forEach(productEntity -> {
             if (currentProducts.contains(productEntity)) {
                 updateProducts.remove(productEntity); // ket qua cuoi cung con nhung product can them vao chuong trinh
@@ -94,6 +93,20 @@ public class SaleProgramServiceImpl implements SaleProgramService {
         currentProducts.forEach(productEntity -> productEntity.setSaleProgram(null));
         productRepository.saveAll(currentProducts);
         return "Update sale program successfully";
+    }
+
+    @Override
+    public String delete(Long id) {
+        SaleProgramEntity saleProgram = saleProgramRepository.findById(id).orElseThrow(() -> new NotFoundException("Sale program not found"));
+
+        List<ProductEntity> productEntities = saleProgram.getProducts().stream().map(productEntity -> {
+            productEntity.setSaleProgram(null);
+            return productEntity;
+        }).toList();
+        productRepository.saveAll(productEntities);
+
+        saleProgramRepository.delete(saleProgram);
+        return "Delete sale program successfully";
     }
 
     @Scheduled(cron = "0 0 0 * * *")
