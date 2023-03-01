@@ -32,4 +32,7 @@ public class ShopEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<ProductEntity> productEntities;
+
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<VoucherEntity> vouchers;
 }

@@ -11,6 +11,7 @@ import javax.validation.constraints.Size;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "LoginData")
@@ -56,4 +57,9 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "address_id")
     private AddressEntity address;
+
+    @ManyToMany(mappedBy = "users")
+    private Set<VoucherEntity> vouchers;
+
+//    TODO: khi xóa user cũng xử lý tương tự xóa voucher để thực hiện xóa các liên kết user_voucher mà không xóa voucher
 }

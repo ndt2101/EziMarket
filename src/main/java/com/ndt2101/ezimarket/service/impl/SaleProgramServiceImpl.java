@@ -36,7 +36,6 @@ public class SaleProgramServiceImpl implements SaleProgramService {
     private SaleProgramRepository saleProgramRepository;
     @PersistenceContext
     private EntityManager entityManager;
-
     @Autowired
     private PlatformTransactionManager transactionManager;
     @Autowired
