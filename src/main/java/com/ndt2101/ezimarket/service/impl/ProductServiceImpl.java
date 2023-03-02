@@ -10,11 +10,12 @@ import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.*;
-import com.google.firebase.cloud.StorageClient;
 import com.ndt2101.ezimarket.base.BaseDTO;
+import com.ndt2101.ezimarket.base.BasePagination;
+import com.ndt2101.ezimarket.dto.SaleProgramDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
-import com.ndt2101.ezimarket.dto.product.ProductTypeDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.elasticsearch.elasticsearchrepository.ELSProductRepository;
 import com.ndt2101.ezimarket.elasticsearch.model.Product;
@@ -22,27 +23,36 @@ import com.ndt2101.ezimarket.exception.NotFoundException;
 import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.ProductService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.client.RestClient;
 import org.modelmapper.ModelMapper;
-import org.modelmapper.TypeMap;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @Slf4j
-public class ProductServiceImpl implements ProductService {
+public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRepository> implements ProductService {
 
     private static final String DOWNLOAD_URL = "https://firebasestorage.googleapis.com/v0/b/ezi-market.appspot.com/o/%s?alt=media";
     @Autowired
@@ -55,7 +65,10 @@ public class ProductServiceImpl implements ProductService {
     private ShopRepository shopRepository;
     @Autowired
     private ImageRepository imageRepository;
-
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
     @Autowired
     private ProductTypeRepository productTypeRepository;
 
@@ -74,6 +87,11 @@ public class ProductServiceImpl implements ProductService {
     // And create the API client
     ElasticsearchClient client = new ElasticsearchClient(transport);
 
+    @Autowired
+    public ProductServiceImpl(ProductRepository repository) {
+        super(repository);
+    }
+
     @Override
     public List<ProductDTO> fuzzySearch(String value) throws IOException {
 
@@ -89,16 +107,30 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
     public String update(ProductPayLoadDTO productPayLoadDTO, Long productId) {
-        productTypeRepository.deleteAllById(
-                productPayLoadDTO.getProductTypeDTOs().stream()
-                        .filter(productTypeDTO -> productTypeDTO.getType().isBlank())
-                        .map(BaseDTO::getId)
-                        .toList());
+        List<Long> deletedIds = productPayLoadDTO.getProductTypeDTOs().stream()
+                .filter(productTypeDTO -> productTypeDTO.getType().isBlank())
+                .map(BaseDTO::getId)
+                .toList();
+        List<ProductTypeEntity> productTypeEntities = productTypeRepository.findAllById(deletedIds);
+        productTypeEntities.forEach(productTypeEntity -> {
+            productTypeEntity.setProduct(null);
+        });
+        deleteProductType(deletedIds);
         productPayLoadDTO.getProductTypeDTOs().removeIf(productTypeDTO -> productTypeDTO.getType().isBlank());
         deleteImage(productId, productPayLoadDTO.getShopId());
         create(productPayLoadDTO);
         return "Update product successfully";
+    }
+
+    @Transactional
+    void deleteProductType(List<Long> deletedIds) {
+        TransactionStatus transaction = transactionManager.getTransaction(new DefaultTransactionDefinition());
+        Query query = entityManager.createQuery("delete from ProductTypeEntity p where p.id in :deletedIds");
+        query.setParameter("deletedIds", deletedIds);
+        query.executeUpdate();
+        transactionManager.commit(transaction);
     }
 
     @Override
@@ -112,30 +144,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductResponseDTO getProductDetail(Long productId) {
-        SaleProgramEntity saleProgram;
         ProductEntity productEntity = productRepository.findById(productId).orElseThrow(() -> new NotFoundException("Product not found"));
-        saleProgram = productEntity.getSaleProgram();
-//        TypeMap<ProductEntity, ProductResponseDTO> propertyMapper = mapper.createTypeMap(ProductEntity.class, ProductResponseDTO.class);
-//        propertyMapper.addMappings(mapper -> mapper.skip(ProductResponseDTO::setImages));
-        ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
-        if (saleProgram != null) {
-            if (saleProgram.getEndTime() < System.currentTimeMillis()) {
-                List<ProductEntity> productEntities = saleProgram.getProducts()
-                        .stream().map(product -> {
-                            product.setSaleProgram(null);
-                            return product;
-                        }).toList();
-                productRepository.saveAll(productEntities);
-                saleProgramRepository.delete(saleProgram);
-            } else {
-                productResponse.getProductTypes().forEach(productTypeDTO -> {
-                    productTypeDTO.setDiscountPrice(productTypeDTO.getPrice() - Math.round(productTypeDTO.getPrice() * (double) saleProgram.getDiscount()));
-                });
-            }
-        }
-        productResponse.setImages(productEntity.getImageEntities().stream().map(ImageEntity::getUrl).toList());
-        productResponse.getShop().setAvatar(productEntity.getShop().getUserLoginData().getAvatarUrl());
-        return productResponse;
+        return mapAndHandleSaleProgram(productEntity);
+    }
+
+    @Override
+    public PaginateDTO<ProductResponseDTO> getList(Integer page, Integer perPage, GenericSpecification<ProductEntity> specification) {
+        PaginateDTO<ProductEntity> productEntityPaginateDTO = this.paginate(page, perPage, specification);
+        List<ProductResponseDTO> productResponseDTOs = productEntityPaginateDTO.getPageData().stream()
+                .map(this::mapAndHandleSaleProgram)
+                .toList();
+        Page<ProductResponseDTO> pageData = new PageImpl<>(productResponseDTOs, PageRequest.of(page, perPage), perPage);
+        return new PaginateDTO<>(pageData, productEntityPaginateDTO.getPagination());
     }
 
     private void deleteImage(Long productId, Long shopId) {
@@ -227,5 +247,28 @@ public class ProductServiceImpl implements ProductService {
 
     private String getExtension(String fileName) {
         return fileName.substring(fileName.lastIndexOf("."));
+    }
+
+    private ProductResponseDTO mapAndHandleSaleProgram(ProductEntity productEntity) {
+        SaleProgramEntity saleProgram = productEntity.getSaleProgram();
+        ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
+        if (saleProgram != null) {
+            if (saleProgram.getEndTime() < System.currentTimeMillis()) {
+                List<ProductEntity> productEntities = saleProgram.getProducts()
+                        .stream().map(product -> {
+                            product.setSaleProgram(null);
+                            return product;
+                        }).toList();
+                productRepository.saveAll(productEntities);
+                saleProgramRepository.delete(saleProgram);
+            } else {
+                productResponse.getProductTypes().forEach(productTypeDTO -> {
+                    productTypeDTO.setDiscountPrice(productTypeDTO.getPrice() - Math.round(productTypeDTO.getPrice() * (double) saleProgram.getDiscount()));
+                });
+            }
+        }
+        productResponse.setImages(productEntity.getImageEntities().stream().map(ImageEntity::getUrl).toList());
+        productResponse.getShop().setAvatar(productEntity.getShop().getUserLoginData().getAvatarUrl());
+        return productResponse;
     }
 }

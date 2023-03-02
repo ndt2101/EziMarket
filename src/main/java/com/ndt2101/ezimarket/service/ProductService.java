@@ -1,8 +1,11 @@
 package com.ndt2101.ezimarket.service;
 
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
+import com.ndt2101.ezimarket.model.ProductEntity;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.io.IOException;
@@ -17,4 +20,6 @@ public interface ProductService {
     String delete(Long productId);
 
     ProductResponseDTO getProductDetail(Long productId);
+
+    PaginateDTO<ProductResponseDTO> getList(Integer page, Integer perPage, GenericSpecification<ProductEntity> specification);
 }

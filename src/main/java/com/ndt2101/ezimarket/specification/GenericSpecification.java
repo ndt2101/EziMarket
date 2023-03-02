@@ -16,7 +16,7 @@ public class GenericSpecification <T> implements Specification<T> {
 
     private List<SearchCriteria> listSearchCriteria;
     private JoinCriteria joinCriteria;
-    private Sort sort = Sort.by("createdAt").descending();
+    private Sort sort = Sort.by("createdTime").descending();
 
     public GenericSpecification() {
         this.listSearchCriteria = new ArrayList<>();
@@ -48,24 +48,31 @@ public class GenericSpecification <T> implements Specification<T> {
 
         for (Map.Entry<String, String[]> item : request.getParameterMap().entrySet()) {
             if (item.getKey().contains("like")) {
-                specification.add(new SearchCriteria(StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
-                        StringUtils.substringBetween(item.getKey(), "[", "]"),
+                specification.add(new SearchCriteria(
+//                        StringUtils.substringBetween(item.getKey(), "[", "]"),
+                        item.getKey(),
+                        StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
                         SearchOperation.LIKE));
             }
             if (item.getKey().contains("equal")) {
                 try {
-                    specification.add(new SearchCriteria(StringUtils.substringBetween(item.getKey(), "[", "]"),
+                    specification.add(new SearchCriteria(
+                            StringUtils.substringBeforeLast(item.getKey(), "_"),
+//                            item.getKey(),
                             Long.parseLong(StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]")),
                             SearchOperation.EQUAL));
                 } catch (NumberFormatException e) {
-                    specification.add(new SearchCriteria(StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
-                            StringUtils.substringBetween(item.getKey(), "[", "]"),
-                            SearchOperation.EQUAL
-                            ));
+                    specification.add(new SearchCriteria(
+                            StringUtils.substringBeforeLast(item.getKey(), "_"),
+//                            item.getKey(),
+                            StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
+                            SearchOperation.EQUAL));
                 }
             }
             if (item.getKey().contains("in")) {
-                specification.add(new SearchCriteria(StringUtils.substringBetween(item.getKey(), "[", "]"),
+                specification.add(new SearchCriteria(
+//                        StringUtils.substringBetween(item.getKey(), "[", "]"),
+                        item.getKey(),
                         Arrays.asList(item.getValue()),
                         SearchOperation.IN));
             }
