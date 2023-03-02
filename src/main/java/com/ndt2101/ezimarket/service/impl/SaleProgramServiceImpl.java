@@ -1,8 +1,12 @@
 package com.ndt2101.ezimarket.service.impl;
 
+import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.dto.SaleProgramDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginationDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
+import com.ndt2101.ezimarket.model.ImageEntity;
 import com.ndt2101.ezimarket.model.ProductEntity;
 import com.ndt2101.ezimarket.model.SaleProgramEntity;
 import com.ndt2101.ezimarket.model.ShopEntity;
@@ -10,8 +14,13 @@ import com.ndt2101.ezimarket.repository.ProductRepository;
 import com.ndt2101.ezimarket.repository.SaleProgramRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
 import com.ndt2101.ezimarket.service.SaleProgramService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -28,7 +37,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class SaleProgramServiceImpl implements SaleProgramService {
+public class SaleProgramServiceImpl extends BasePagination<SaleProgramEntity, SaleProgramRepository> implements SaleProgramService {
 
     @Autowired
     private ModelMapper mapper;
@@ -42,6 +51,12 @@ public class SaleProgramServiceImpl implements SaleProgramService {
     private ProductRepository productRepository;
     @Autowired
     private ShopRepository shopRepository;
+
+    @Autowired
+    public SaleProgramServiceImpl(SaleProgramRepository saleProgramRepository) {
+        super(saleProgramRepository);
+    }
+
     @Override
     public String create(SaleProgramDTO saleProgramDTO) {
 
@@ -95,6 +110,19 @@ public class SaleProgramServiceImpl implements SaleProgramService {
     }
 
     @Override
+    public SaleProgramDTO getById(Long id) {
+        SaleProgramEntity saleProgramEntity = saleProgramRepository.findById(id).orElseThrow(() -> new NotFoundException("Sale program not found"));
+        SaleProgramDTO saleProgramResponse = mapper.map(saleProgramEntity, SaleProgramDTO.class);
+        List<ProductResponseDTO> productResponseDTOs = saleProgramEntity.getProducts().stream().map(productEntity -> {
+            ProductResponseDTO productResponseDTO = mapper.map(productEntity, ProductResponseDTO.class);
+            productResponseDTO.setImages(new ArrayList<>(List.of(productEntity.getImageEntities().get(0).getUrl())));
+            return productResponseDTO;
+        }).toList();
+        saleProgramResponse.setProducts(productResponseDTOs);
+        return saleProgramResponse;
+    }
+
+    @Override
     public String delete(Long id) {
         SaleProgramEntity saleProgram = saleProgramRepository.findById(id).orElseThrow(() -> new NotFoundException("Sale program not found"));
 
@@ -106,6 +134,16 @@ public class SaleProgramServiceImpl implements SaleProgramService {
 
         saleProgramRepository.delete(saleProgram);
         return "Delete sale program successfully";
+    }
+
+    @Override
+    public PaginateDTO<SaleProgramDTO> getSalePrograms(int page, int perPage) {
+        PaginateDTO<SaleProgramEntity> saleProgramEntityPaginateDTO = this.paginate(page, perPage);
+        List<SaleProgramDTO> saleProgramDTOs = saleProgramEntityPaginateDTO.getPageData().stream()
+                .map(saleProgramEntity -> mapper.map(saleProgramEntity, SaleProgramDTO.class))
+                .toList();
+        Page<SaleProgramDTO> pageData = new PageImpl<>(saleProgramDTOs, PageRequest.of(page, perPage), perPage);
+        return new PaginateDTO<>(pageData, saleProgramEntityPaginateDTO.getPagination());
     }
 
     @Scheduled(cron = "0 0 0 * * *")

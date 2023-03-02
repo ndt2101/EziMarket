@@ -1,15 +1,23 @@
 package com.ndt2101.ezimarket.service.impl;
 
+import com.ndt2101.ezimarket.base.BasePagination;
+import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.VoucherDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
+import com.ndt2101.ezimarket.model.SaleProgramEntity;
 import com.ndt2101.ezimarket.model.ShopEntity;
 import com.ndt2101.ezimarket.model.UserLoginDataEntity;
 import com.ndt2101.ezimarket.model.VoucherEntity;
+import com.ndt2101.ezimarket.repository.SaleProgramRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
 import com.ndt2101.ezimarket.repository.VoucherRepository;
 import com.ndt2101.ezimarket.service.VoucherService;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -22,7 +30,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class VoucherServiceImpl implements VoucherService {
+public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRepository> implements VoucherService {
     @Autowired
     private ShopRepository shopRepository;
     @Autowired
@@ -33,6 +41,10 @@ public class VoucherServiceImpl implements VoucherService {
     private EntityManager entityManager;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private VoucherServiceImpl(VoucherRepository voucherRepository) {
+        super(voucherRepository);
+    }
     @Override
     public VoucherDTO create(VoucherDTO voucherDTO) {
         ShopEntity shop = shopRepository.findById(voucherDTO.getShopId()).orElseThrow(() -> new NotFoundException("Shop not found"));
@@ -56,7 +68,6 @@ public class VoucherServiceImpl implements VoucherService {
         currentVoucher.setShop(shop);
         currentVoucher.setUsers(userHasVouchers);
 
-
         updateVoucher = voucherRepository.save(currentVoucher);
         voucherDTO = mapper.map(updateVoucher, VoucherDTO.class);
         voucherDTO.setShopId(shop.getId());
@@ -71,6 +82,30 @@ public class VoucherServiceImpl implements VoucherService {
         users.forEach(user -> user.getVouchers().remove(voucherEntity));
         voucherRepository.delete(voucherEntity);
         return "Delete voucher successfully";
+    }
+
+    @Override
+    public VoucherDTO getDetail(Long id) {
+        VoucherEntity voucherEntity = voucherRepository.findById(id).orElseThrow(() -> new NotFoundException("Voucher not found"));
+        VoucherDTO responseVoucher = mapper.map(voucherEntity, VoucherDTO.class);
+        responseVoucher.setShopId(voucherEntity.getShop().getId());
+        responseVoucher.setImg(voucherEntity.getShop().getUserLoginData().getAvatarUrl());
+        return responseVoucher;
+    }
+
+    @Override
+    public PaginateDTO<VoucherDTO> getVouchers(int page, int perPage) {
+        PaginateDTO<VoucherEntity> voucherEntityPaginateDTO = this.paginate(page, perPage);
+        List<VoucherDTO> voucherDTOs = voucherEntityPaginateDTO.getPageData().stream()
+                .map(voucherEntity -> {
+                    VoucherDTO voucherDTO = mapper.map(voucherEntity, VoucherDTO.class);
+                    voucherDTO.setImg(voucherEntity.getShop().getUserLoginData().getAvatarUrl());
+                    voucherDTO.setShopId(voucherEntity.getShop().getId());
+                    return voucherDTO;
+                })
+                .toList();
+        Page<VoucherDTO> pageData = new PageImpl<>(voucherDTOs, PageRequest.of(page, perPage), perPage);
+        return new PaginateDTO<>(pageData, voucherEntityPaginateDTO.getPagination());
     }
 
     @Scheduled(cron = "0 0 0 * * *")
