@@ -2,11 +2,11 @@ package com.ndt2101.ezimarket.service.impl;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.FuzzyQuery;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.auth.Credentials;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.storage.*;
@@ -26,7 +26,16 @@ import com.ndt2101.ezimarket.service.ProductService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.unit.Fuzziness;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -79,13 +88,11 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
 
 
     // Create the low-level client
-    RestClient restClient = RestClient.builder(new HttpHost("localhost", 9200)).build();
-
-    // Create the transport with a Jackson mapper
-    ElasticsearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
-
-    // And create the API client
-    ElasticsearchClient client = new ElasticsearchClient(transport);
+    RestHighLevelClient client = new RestHighLevelClient(
+            RestClient.builder(
+                    new HttpHost("localhost", 9200, "http")
+            )
+    );
 
     @Autowired
     public ProductServiceImpl(ProductRepository repository) {
@@ -95,13 +102,22 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
     @Override
     public List<ProductDTO> fuzzySearch(String value) throws IOException {
 
-        FuzzyQuery fuzzyQuery = new FuzzyQuery.Builder().field("name").value(value).transpositions(true).fuzziness("auto").build();
-        SearchResponse<ProductDTO> fuzzySearch = client.search(s -> s.index("product").query(q -> q.fuzzy(fuzzyQuery)), ProductDTO.class);
-
         List<ProductDTO> result = new ArrayList<>();
 
-        for (Hit<ProductDTO> hit : fuzzySearch.hits().hits()) {
-            result.add(hit.source());
+        QueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                .should(QueryBuilders.wildcardQuery("name", "*" + value + "*"))
+                .should(QueryBuilders.fuzzyQuery("name", value).fuzziness(Fuzziness.AUTO).transpositions(false));
+
+        SearchRequest searchRequest = new SearchRequest("product")
+                .source(new SearchSourceBuilder()
+                        .query(queryBuilder)
+                );
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            ProductDTO yourPojo = objectMapper.readValue(hit.getSourceAsString(), ProductDTO.class);
+            result.add(yourPojo);
         }
         return result;
     }

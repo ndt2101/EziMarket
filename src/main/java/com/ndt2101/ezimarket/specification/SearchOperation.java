@@ -14,5 +14,6 @@ public enum SearchOperation {
     IN,
     FROM_DATE,
     TO_DATE,
+    BETWEEN,
 }
 

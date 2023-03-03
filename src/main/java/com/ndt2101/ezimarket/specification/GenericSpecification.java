@@ -1,6 +1,8 @@
 package com.ndt2101.ezimarket.specification;
 
 import com.ndt2101.ezimarket.constant.Common;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.data.jpa.domain.Specification;
 
 import org.apache.commons.lang3.StringUtils;
@@ -53,6 +55,20 @@ public class GenericSpecification <T> implements Specification<T> {
                         item.getKey(),
                         StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
                         SearchOperation.LIKE));
+            }
+            if (item.getKey().contains("greater-than")) {
+                specification.add(new SearchCriteria(
+//                        StringUtils.substringBetween(item.getKey(), "[", "]"),
+                        StringUtils.substringBeforeLast(item.getKey(), "_"),
+                        StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
+                        SearchOperation.GREATER_THAN_EQUAL));
+            }
+            if (item.getKey().contains("less-than")) {
+                specification.add(new SearchCriteria(
+//                        StringUtils.substringBetween(item.getKey(), "[", "]"),
+                        StringUtils.substringBeforeLast(item.getKey(), "_"),
+                        StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
+                        SearchOperation.LESS_THAN_EQUAL));
             }
             if (item.getKey().contains("equal")) {
                 try {
@@ -112,6 +128,16 @@ public class GenericSpecification <T> implements Specification<T> {
             return builder.isNull(join.get(key));
         } else if (searchOperation.equals(SearchOperation.NOT_NULL)) {
             return builder.isNotNull(join.get(key));
+        } else if (searchOperation.equals(SearchOperation.BETWEEN)) {
+            String[] range = StringUtils.split((String) value, "-");
+            try {
+                Expression<Long> keyExpression = join.get(key);
+                Long min = Long.parseLong(range[0]);
+                Long max = Long.parseLong(range[1]);
+                return builder.between(keyExpression, min, max);
+            } catch (Exception e) {
+                throw e;
+            }
         }
         return null;
     }
