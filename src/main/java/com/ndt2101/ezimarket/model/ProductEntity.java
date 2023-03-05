@@ -53,4 +53,7 @@ public class ProductEntity extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "sale_program_id")
     private SaleProgramEntity saleProgram;
+
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<PostEntity> posts;
 }

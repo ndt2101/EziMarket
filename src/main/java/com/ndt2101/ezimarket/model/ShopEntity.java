@@ -35,4 +35,7 @@ public class ShopEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<VoucherEntity> vouchers;
+
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PostEntity> post;
 }

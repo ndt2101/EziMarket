@@ -24,6 +24,7 @@ import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.ProductService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
+import com.ndt2101.ezimarket.utils.FileHandle;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.search.SearchRequest;
@@ -63,7 +64,6 @@ import java.util.UUID;
 @Slf4j
 public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRepository> implements ProductService {
 
-    private static final String DOWNLOAD_URL = "https://firebasestorage.googleapis.com/v0/b/ezi-market.appspot.com/o/%s?alt=media";
     @Autowired
     private ProductRepository productRepository;
     @Autowired
@@ -85,6 +85,8 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
     private ELSProductRepository elsProductRepository;
     @Autowired
     private SaleProgramRepository saleProgramRepository;
+    @Autowired
+    private FileHandle fileHandle;
 
 
     // Create the low-level client
@@ -219,7 +221,7 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
         productTypeRepository.saveAll(productTypeEntities);
         List<String> imageUrls = uploadImages(productPayLoad, imageNames, productEntity.getId());
         for (int i = 0; i < imageNames.size(); i++) {
-            imageRepository.save(new ImageEntity(imageNames.get(i), imageUrls.get(i), productEntity));
+            imageRepository.save(new ImageEntity(imageNames.get(i), imageUrls.get(i), productEntity, null));
         }
         elsProductRepository.save(new Product(productEntity.getId(), productEntity.getName()));
         return "Create product successfully";
@@ -230,39 +232,18 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
         productPayLoad.getImages().forEach(multipartFile -> {
             try {
                 String fileName = multipartFile.getOriginalFilename();                        // to get original file name
-                fileName = UUID.randomUUID().toString().concat(this.getExtension(fileName));  // to generated random string values for file name.
+                fileName = UUID.randomUUID().toString().concat(fileHandle.getExtension(fileName));  // to generated random string values for file name.
                 fileNames.add(fileName);
 
-                File file = this.convertToFile(multipartFile, fileName);                      // to convert multipartFile to File
-                imageUrls.add(this.uploadFile(file, fileName, productPayLoad.getShopId(), id));                                   // to get uploaded file link
+                File file = fileHandle.convertToFile(multipartFile, fileName);                      // to convert multipartFile to File
+                String path = "images/" + productPayLoad.getShopId() + "/" + id + "/" + fileName;
+                imageUrls.add(fileHandle.uploadFile(file, path));                                   // to get uploaded file link
                 file.delete();                                                                // to delete the copy of uploaded file stored in the project folder
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
         return imageUrls;
-    }
-
-    private String uploadFile(File file, String fileName, Long shopId, Long id) throws IOException {
-        BlobId blobId = BlobId.of("ezi-market.appspot.com", "images/" + shopId + "/" + id + "/" + fileName);
-        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("image/png").build();
-        Credentials credentials = GoogleCredentials.fromStream(new FileInputStream("src/main/resources/ezi-market-firebase-adminsdk-18xex-fa8c704037.json"));
-        Storage storage = StorageOptions.newBuilder().setCredentials(credentials).build().getService();
-        storage.create(blobInfo, Files.readAllBytes(file.toPath()));
-        return String.format(DOWNLOAD_URL, URLEncoder.encode("images/" + shopId + "/" + id + "/" + fileName, StandardCharsets.UTF_8));
-    }
-
-    private File convertToFile(MultipartFile multipartFile, String fileName) throws IOException {
-        File tempFile = new File(fileName);
-        try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-            fos.write(multipartFile.getBytes());
-            fos.close();
-        }
-        return tempFile;
-    }
-
-    private String getExtension(String fileName) {
-        return fileName.substring(fileName.lastIndexOf("."));
     }
 
     private ProductResponseDTO mapAndHandleSaleProgram(ProductEntity productEntity) {

@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
 
 
@@ -35,5 +36,7 @@ public class VoucherEntity extends BaseEntity {
     @JoinTable(name = "user_voucher", joinColumns = @JoinColumn(name = "voucher_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<UserLoginDataEntity> users;
 
+    @OneToMany(mappedBy = "voucher", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<PostEntity> posts;
 //    TODO: order
 }

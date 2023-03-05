@@ -61,5 +61,9 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @ManyToMany(mappedBy = "users")
     private Set<VoucherEntity> vouchers;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    private List<CommentEntity> comments;
+
+
 //    TODO: khi xóa user cũng xử lý tương tự xóa voucher để thực hiện xóa các liên kết user_voucher mà không xóa voucher
 }

@@ -66,6 +66,7 @@ public class ProductController extends BaseController<Object> {
     public ResponseEntity<?> getProducts(
             @RequestParam(name = "name", required = false) String name,
             @RequestParam(name = "price", required = false) String priceRange,
+            @RequestParam(name = "category", required = false) Long categoryId,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage,
             HttpServletRequest request) throws IOException {
@@ -74,6 +75,11 @@ public class ProductController extends BaseController<Object> {
 
         if (priceRange != null) {
             JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.BETWEEN, "productTypes", "price", priceRange, JoinType.LEFT);
+            specification.buildJoin(joinCriteria);
+        }
+
+        if (categoryId != null) {
+            JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.EQUAL, "category", "id", categoryId, JoinType.LEFT);
             specification.buildJoin(joinCriteria);
         }
 

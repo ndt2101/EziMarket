@@ -1,8 +1,6 @@
 package com.ndt2101.ezimarket.specification;
 
 import com.ndt2101.ezimarket.constant.Common;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.data.jpa.domain.Specification;
 
 import org.apache.commons.lang3.StringUtils;
@@ -17,12 +15,12 @@ import java.util.*;
 public class GenericSpecification <T> implements Specification<T> {
 
     private List<SearchCriteria> listSearchCriteria;
-    private JoinCriteria joinCriteria;
+    private List<JoinCriteria> listJoinCriteria;
     private Sort sort = Sort.by("createdTime").descending();
 
     public GenericSpecification() {
         this.listSearchCriteria = new ArrayList<>();
-        this.joinCriteria = null;
+        this.listJoinCriteria = new ArrayList<>();;
     }
 
     public void add(SearchCriteria searchCriteria) {
@@ -42,7 +40,7 @@ public class GenericSpecification <T> implements Specification<T> {
     }
 
     public void buildJoin(JoinCriteria joinCriteria) {
-        this.joinCriteria = joinCriteria;
+        this.listJoinCriteria.add(joinCriteria);
     }
 
     public GenericSpecification<T> getBasicQuery(HttpServletRequest request) {
@@ -150,17 +148,19 @@ public class GenericSpecification <T> implements Specification<T> {
     public Predicate toPredicate(Root<T> root, CriteriaQuery<?> query, CriteriaBuilder builder) {
         List<Predicate> predicates = new ArrayList<>();
 
-        if (this.joinCriteria != null) {
-            Join<Object, Object> join = root.join(this.joinCriteria.getJoinColumnName(), this.joinCriteria.getJoinType());
-            predicates.add(
-                    this.buildJoinPredicate(
-                            this.joinCriteria.getSearchOperation(),
-                            this.joinCriteria.getKey(),
-                            this.joinCriteria.getValue(),
-                            builder,
-                            join
-                    )
-            );
+        if (!this.listJoinCriteria.isEmpty()) {
+            this.listJoinCriteria.forEach(joinCriteria -> {
+                Join<Object, Object> join = root.join(joinCriteria.getJoinColumnName(), joinCriteria.getJoinType());
+                predicates.add(
+                        this.buildJoinPredicate(
+                                joinCriteria.getSearchOperation(),
+                                joinCriteria.getKey(),
+                                joinCriteria.getValue(),
+                                builder,
+                                join
+                        )
+                );
+            });
         }
 
         for (SearchCriteria criteria : listSearchCriteria) {

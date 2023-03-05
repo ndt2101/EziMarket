@@ -27,4 +27,7 @@ public class ImageEntity extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "product_id")
     private ProductEntity product;
+
+    @OneToOne(mappedBy = "image", cascade = CascadeType.ALL)
+    private PostEntity post;
 }
