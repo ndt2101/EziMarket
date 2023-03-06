@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import javax.persistence.*;
 import java.sql.Date;
@@ -22,17 +24,19 @@ public class FollowerEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name="from_user_fk")
+    @ManyToOne()
+    @JoinColumn(name="from_user")
     private UserLoginDataEntity from;
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name="to_user_fk")
-    private UserLoginDataEntity to;
+    @ManyToOne()
+    @JoinColumn(name="to_shop")
+    private ShopEntity to;
 
     @Column()
+    @CreationTimestamp
     private Date followedDate;
 
-    @Column
-    private Date unfollowedDate;
+//    @Column
+//    @UpdateTimestamp
+//    private Date unfollowedDate;
 }

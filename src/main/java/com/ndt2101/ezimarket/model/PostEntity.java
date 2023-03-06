@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.List;
+import java.util.Set;
 
 @Table(name = "Post")
 @Entity
@@ -33,7 +34,7 @@ public class PostEntity extends BaseEntity {
 
     @ManyToMany
     @JoinTable(name = "user_like", joinColumns = @JoinColumn(name = "post_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private List<UserLoginDataEntity> likes;
+    private Set<UserLoginDataEntity> likes;
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CommentEntity> comments;

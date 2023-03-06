@@ -48,11 +48,8 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @OneToOne(mappedBy = "userLoginData")
     private ShopEntity shop;
 
-    @OneToMany(mappedBy = "to")
+    @OneToMany(mappedBy = "to", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FollowerEntity> followers;
-
-    @OneToMany(mappedBy = "from")
-    private List<FollowerEntity> followings;
 
     @OneToOne(orphanRemoval = true)
     @JoinColumn(name = "address_id")

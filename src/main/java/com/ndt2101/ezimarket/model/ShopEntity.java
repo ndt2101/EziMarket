@@ -38,4 +38,7 @@ public class ShopEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<PostEntity> post;
+
+    @OneToMany(mappedBy = "from", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<FollowerEntity> followings;
 }

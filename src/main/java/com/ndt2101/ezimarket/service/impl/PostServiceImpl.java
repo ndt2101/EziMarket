@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
+import com.ndt2101.ezimarket.dto.LikeDTO;
 import com.ndt2101.ezimarket.dto.PostDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.pagination.Pagination;
@@ -12,6 +13,9 @@ import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.PostService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
+import com.ndt2101.ezimarket.specification.JoinCriteria;
+import com.ndt2101.ezimarket.specification.SearchCriteria;
+import com.ndt2101.ezimarket.specification.SearchOperation;
 import com.ndt2101.ezimarket.utils.FileHandle;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,7 +49,9 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
     @Autowired
     private ImageRepository imageRepository;
     @Autowired
-    private CategoryRepository categoryRepository;
+    private FollowerRepository followerRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     public PostServiceImpl(PostRepository repository) {
@@ -84,15 +91,46 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
     }
 
     @Override
-    public PaginateDTO<PostDTO> getList(Long categoryId, Integer page, Integer perPage) {
+    public PaginateDTO<PostDTO> getList(Long userId, Long categoryId, Integer page, Integer perPage) {
+        Page<PostEntity> pageData = postRepository.findAllByProductCategoryId(categoryId, PageRequest.of(page - 1, perPage, Sort.by("createdTime").descending()));
+        return mapPaginate(userId, pageData, page, perPage);
+    }
+
+    @Override
+    public LikeDTO like(LikeDTO likeDTO) {
+        PostEntity postEntity = postRepository.findById(likeDTO.getPostId()).orElseThrow(() -> new NotFoundException("Post not found"));
+        UserLoginDataEntity user = userRepository.findById(likeDTO.getUserId()).orElseThrow(() -> new NotFoundException("User not found"));
+        if (!postEntity.getLikes().contains(user)) {
+            postEntity.getLikes().add(user);
+            postEntity = postRepository.save(postEntity);
+        }
+        return new LikeDTO(postEntity.getId(), likeDTO.getUserId(), postEntity.getLikes().size(), postEntity.getLikes().contains(user));
+    }
+
+    @Override
+    public PaginateDTO<PostDTO> getFollowingPost(Long userId, Integer page, Integer perPage) {
+        GenericSpecification<FollowerEntity> followerSpecification = new GenericSpecification<FollowerEntity>();
+        followerSpecification.add(new SearchCriteria("from", userId, SearchOperation.EQUAL));
+        List<Long> shopIds = followerRepository.findAll(followerSpecification).stream().map(followerEntity -> followerEntity.getTo().getId()).toList();
+
+        if (!shopIds.isEmpty()){
+            GenericSpecification<PostEntity> specification = new GenericSpecification<>();
+            specification.add(new SearchCriteria("shop", shopIds, SearchOperation.IN));
+
+            PaginateDTO<PostEntity> postEntityPaginateDTO = this.paginate(page, perPage, specification);
+            return mapPaginate(userId, postEntityPaginateDTO.getPageData(), page, perPage);
+        }
+        throw new NotFoundException("Post not found");
+    }
+
+    private PaginateDTO<PostDTO> mapPaginate(Long userId, Page<PostEntity> pageData, Integer page, Integer perPage) {
         if (page == null || page <= 0) {
             page = 1;
         }
         if (perPage == null || perPage <= 0) {
             perPage = Common.PAGING_DEFAULT_LIMIT;
         }
-//        CategoryEntity categoryEntity = categoryRepository.findById(categoryId).get();
-        Page<PostEntity> pageData = postRepository.findAllByProductCategoryId(categoryId, PageRequest.of(page - 1, perPage, Sort.by("createdTime").descending()));
+        UserLoginDataEntity user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         Pagination pagination = new Pagination(page, perPage, pageData.getTotalPages(), pageData.getTotalElements());
         List<PostDTO> postDTOs = pageData.stream()
                 .map(postEntity -> {
@@ -103,12 +141,11 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
                         postDTO.setImageUrl(postEntity.getImage().getUrl());
                     }
                     postDTO.getProduct().setImages(List.of(postEntity.getProduct().getImageEntities().get(0).getUrl()));
+                    postDTO.setLikes(new LikeDTO(postEntity.getId(), userId, postEntity.getLikes().size(), postEntity.getLikes().contains(user)));
                     return postDTO;
                 })
                 .toList();
         Page<PostDTO> postDTOPageData = new PageImpl<>(postDTOs, PageRequest.of(page, perPage), perPage);
         return new PaginateDTO<>(postDTOPageData, pagination);
     }
-
-
 }
