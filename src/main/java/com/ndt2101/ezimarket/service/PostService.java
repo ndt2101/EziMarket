@@ -11,4 +11,5 @@ public interface PostService {
     PaginateDTO<PostDTO> getList(Long userId, Long categoryId, Integer page, Integer perPage);
     LikeDTO like(LikeDTO likeDTO);
     PaginateDTO<PostDTO> getFollowingPost(Long id, Integer page, Integer perPage);
+
 }

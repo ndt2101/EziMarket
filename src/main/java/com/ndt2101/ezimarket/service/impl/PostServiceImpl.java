@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -142,6 +141,11 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
                     }
                     postDTO.getProduct().setImages(List.of(postEntity.getProduct().getImageEntities().get(0).getUrl()));
                     postDTO.setLikes(new LikeDTO(postEntity.getId(), userId, postEntity.getLikes().size(), postEntity.getLikes().contains(user)));
+                    if (postEntity.getVoucher().getQuantity() <= postEntity.getVoucher().getSaved() || postEntity.getVoucher().getEndTime() < System.currentTimeMillis()) {
+                        postDTO.setVoucher(null);
+                    } else {
+                        postDTO.getVoucher().setSaved(postEntity.getVoucher().getUsers().contains(user) ? 1 : 0);
+                    }
                     return postDTO;
                 })
                 .toList();

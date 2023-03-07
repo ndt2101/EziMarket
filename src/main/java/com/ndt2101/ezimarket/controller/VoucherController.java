@@ -42,4 +42,9 @@ public class VoucherController extends BaseController<Object> {
         PaginateDTO<VoucherDTO> voucherDTOPaginateDTO = voucherService.getVouchers(page, perPage);
         return this.resPagination(voucherDTOPaginateDTO);
     }
+
+    @PutMapping("{voucherId}/{userId}")
+    public ResponseEntity<?> saveForUser(@PathVariable Long voucherId, @PathVariable Long userId) {
+        return this.successfulResponse(voucherService.saveVoucherFromPost(userId, voucherId));
+    }
 }

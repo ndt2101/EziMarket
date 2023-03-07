@@ -11,6 +11,7 @@ import com.ndt2101.ezimarket.model.UserLoginDataEntity;
 import com.ndt2101.ezimarket.model.VoucherEntity;
 import com.ndt2101.ezimarket.repository.SaleProgramRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
+import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.repository.VoucherRepository;
 import com.ndt2101.ezimarket.service.VoucherService;
 import org.modelmapper.ModelMapper;
@@ -41,6 +42,8 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
     private EntityManager entityManager;
     @Autowired
     private PlatformTransactionManager transactionManager;
+    @Autowired
+    private UserRepository userRepository;
     @Autowired
     private VoucherServiceImpl(VoucherRepository voucherRepository) {
         super(voucherRepository);
@@ -106,6 +109,23 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
                 .toList();
         Page<VoucherDTO> pageData = new PageImpl<>(voucherDTOs, PageRequest.of(page, perPage), perPage);
         return new PaginateDTO<>(pageData, voucherEntityPaginateDTO.getPagination());
+    }
+
+    @Override
+    public VoucherDTO saveVoucherFromPost(Long userId, Long voucherId) {
+        VoucherEntity voucherEntity = voucherRepository.findById(voucherId).orElseThrow(() -> new NotFoundException("Voucher not found"));
+        UserLoginDataEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
+        if (!voucherEntity.getUsers().contains(userEntity) && voucherEntity.getEndTime() >= System.currentTimeMillis() && voucherEntity.getSaved() < voucherEntity.getQuantity()) {
+            voucherEntity.getUsers().add(userEntity);
+            voucherEntity = voucherRepository.save(voucherEntity);
+
+            VoucherDTO voucherDTO = mapper.map(voucherEntity, VoucherDTO.class);
+            voucherDTO.setImg(voucherEntity.getShop().getUserLoginData().getAvatarUrl());
+            voucherDTO.setShopId(voucherEntity.getShop().getId());
+            voucherDTO.setSaved(voucherEntity.getUsers().contains(userEntity) ? 1: 0);
+            return voucherDTO;
+        }
+        throw new NotFoundException("Cant save voucher for user");
     }
 
     @Scheduled(cron = "0 0 0 * * *")

@@ -10,4 +10,5 @@ public interface VoucherService {
     String delete(Long id);
     VoucherDTO getDetail(Long id);
     PaginateDTO<VoucherDTO> getVouchers(int page, int perPage);
+    VoucherDTO saveVoucherFromPost(Long userId, Long voucherId);
 }

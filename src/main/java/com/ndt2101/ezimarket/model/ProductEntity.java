@@ -56,4 +56,7 @@ public class ProductEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<PostEntity> posts;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<CommentEntity> comments;
 }
