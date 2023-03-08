@@ -8,6 +8,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import javax.persistence.*;
+import java.util.List;
 
 @Entity
 @Table(name = "detail_address")
@@ -39,4 +40,7 @@ public class AddressEntity extends BaseEntity {
 
     @OneToOne(mappedBy = "address", cascade = CascadeType.ALL)
     private UserLoginDataEntity userLoginData;
+
+    @OneToMany(mappedBy = "shipTo")
+    private List<OrderEntity> orders;
 }

@@ -8,7 +8,8 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Set;
 
 @Table(name = "ProductType")
 @Entity
@@ -31,4 +32,7 @@ public class ProductTypeEntity extends BaseEntity {
     @ManyToOne()
     @JoinColumn(name = "product_id")
     private ProductEntity product;
+
+    @OneToMany(mappedBy = "productType", fetch = FetchType.LAZY)
+    private Set<OrderItemEntity> orderItems;
 }
