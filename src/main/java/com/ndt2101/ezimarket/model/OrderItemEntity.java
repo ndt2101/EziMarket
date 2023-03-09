@@ -25,5 +25,5 @@ public class OrderItemEntity extends BaseEntity {
     private OrderEntity order;
 
     @Column
-    private Long quantity;
+    private Long quantity = 0L;
 }

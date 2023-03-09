@@ -18,6 +18,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,15 +65,31 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             return order;
         });
 
-        OrderItemEntity orderItemEntity = new OrderItemEntity();
-        orderItemEntity.setQuantity(orderItemDTO.getQuantity());
-        orderItemEntity.setOrder(orderEntity);
-        orderItemEntity.setProductType(productTypeEntity);
+        GenericSpecification<OrderItemEntity> orderItemSpecification = new GenericSpecification<OrderItemEntity>();
+        orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "productType", "id" , orderItemDTO.getProductTypeId(), JoinType.INNER));
+        orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "order", "id", orderEntity.getId(), JoinType.INNER));
+        OrderItemEntity orderItemEntity = orderItemRepository.findOne(orderItemSpecification).orElseGet(OrderItemEntity::new);
+        Long quantity = orderItemEntity.getQuantity() + orderItemDTO.getQuantity();
 
-        orderItemRepository.save(orderItemEntity);
+        if (quantity <= 0) {
+            orderItemRepository.deleteById(orderItemEntity.getId());
+            orderEntity.getOrderItems().remove(orderItemEntity);
+        } else {
+            orderItemEntity.setQuantity(quantity);
+            orderItemEntity.setOrder(orderEntity);
+            orderItemEntity.setProductType(productTypeEntity);
 
-        orderEntity.getOrderItems().add(orderItemEntity);
-        return formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0);
+            orderItemRepository.save(orderItemEntity);
+
+            orderEntity.getOrderItems().add(orderItemEntity);
+        }
+
+        List<OrderDTO> orderDTOs = formatResponseData(orderEntity.getOrderItems().stream().toList());
+        if (orderDTOs.isEmpty()) {
+            return null;
+        } else {
+            return orderDTOs.get(0);
+        }
     }
 
     private ProductResponseDTO mapAndHandleSaleProgram(ProductEntity productEntity) {
