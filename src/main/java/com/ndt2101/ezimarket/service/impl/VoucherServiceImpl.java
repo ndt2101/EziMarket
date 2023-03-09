@@ -1,19 +1,17 @@
 package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
-import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.VoucherDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
-import com.ndt2101.ezimarket.model.SaleProgramEntity;
 import com.ndt2101.ezimarket.model.ShopEntity;
 import com.ndt2101.ezimarket.model.UserLoginDataEntity;
 import com.ndt2101.ezimarket.model.VoucherEntity;
-import com.ndt2101.ezimarket.repository.SaleProgramRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
 import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.repository.VoucherRepository;
 import com.ndt2101.ezimarket.service.VoucherService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -97,15 +95,15 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
     }
 
     @Override
-    public PaginateDTO<VoucherDTO> getVouchers(int page, int perPage) {
-        PaginateDTO<VoucherEntity> voucherEntityPaginateDTO = this.paginate(page, perPage);
+    public PaginateDTO<VoucherDTO> getVouchers(int page, int perPage, GenericSpecification<VoucherEntity> specification) {
+        PaginateDTO<VoucherEntity> voucherEntityPaginateDTO = this.paginate(page, perPage, specification);
         List<VoucherDTO> voucherDTOs = voucherEntityPaginateDTO.getPageData().stream()
                 .map(voucherEntity -> {
                     VoucherDTO voucherDTO = mapper.map(voucherEntity, VoucherDTO.class);
                     voucherDTO.setImg(voucherEntity.getShop().getUserLoginData().getAvatarUrl());
                     voucherDTO.setShopId(voucherEntity.getShop().getId());
                     return voucherDTO;
-                })
+                }).filter(voucherDTO -> voucherDTO.getEndTime() > System.currentTimeMillis())
                 .toList();
         Page<VoucherDTO> pageData = new PageImpl<>(voucherDTOs, PageRequest.of(page, perPage), perPage);
         return new PaginateDTO<>(pageData, voucherEntityPaginateDTO.getPagination());
@@ -117,6 +115,7 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
         UserLoginDataEntity userEntity = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         if (!voucherEntity.getUsers().contains(userEntity) && voucherEntity.getEndTime() >= System.currentTimeMillis() && voucherEntity.getSaved() < voucherEntity.getQuantity()) {
             voucherEntity.getUsers().add(userEntity);
+            voucherEntity.setSaved(voucherEntity.getSaved() + 1);
             voucherEntity = voucherRepository.save(voucherEntity);
 
             VoucherDTO voucherDTO = mapper.map(voucherEntity, VoucherDTO.class);
@@ -128,10 +127,12 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
         throw new NotFoundException("Cant save voucher for user");
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "*/60 * * * * *")
     void automaticallyDelete() {
         TransactionStatus transaction = transactionManager.getTransaction(new DefaultTransactionDefinition());
         try {
+            String updateSpql = "UPDATE PostEntity p SET p.voucher = null WHERE p.voucher in (SELECT v.id FROM VoucherEntity v where v.endTime < FUNCTION('UNIX_TIMESTAMP') * 1000)";
+            entityManager.createQuery(updateSpql).executeUpdate();
             String spql = "DELETE FROM VoucherEntity v where v.endTime < FUNCTION('UNIX_TIMESTAMP') * 1000";
             entityManager.createQuery(spql).executeUpdate();
             transactionManager.commit(transaction);

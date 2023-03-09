@@ -1,5 +1,6 @@
 package com.ndt2101.ezimarket.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ndt2101.ezimarket.base.BaseEntity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,5 +25,6 @@ public class ShippingMethod extends BaseEntity {
     @Column
     private Long price;
     @Column
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private Date receivedDay;
 }

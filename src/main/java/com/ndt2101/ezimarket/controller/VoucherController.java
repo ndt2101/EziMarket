@@ -4,10 +4,16 @@ import com.ndt2101.ezimarket.base.BaseController;
 import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.VoucherDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
+import com.ndt2101.ezimarket.model.VoucherEntity;
 import com.ndt2101.ezimarket.service.VoucherService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
+import com.ndt2101.ezimarket.specification.JoinCriteria;
+import com.ndt2101.ezimarket.specification.SearchOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import javax.persistence.criteria.JoinType;
 
 @RestController
 @RequestMapping("/api/voucher/")
@@ -36,10 +42,19 @@ public class VoucherController extends BaseController<Object> {
     }
 
     @GetMapping()
-    public ResponseEntity<?> getSaleProgram(
+    public ResponseEntity<?> getVouchers(
+            @RequestParam(name = "shopId", required = false) Long shopId,
+            @RequestParam(name = "userId", required = false) Long userId,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage) {
-        PaginateDTO<VoucherDTO> voucherDTOPaginateDTO = voucherService.getVouchers(page, perPage);
+        GenericSpecification<VoucherEntity> specification = new GenericSpecification<VoucherEntity>();
+        if (shopId != null) {
+            specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "shop", "id", shopId, JoinType.INNER));
+        }
+        if (userId != null) {
+            specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "users", "id", userId, JoinType.INNER));
+        }
+        PaginateDTO<VoucherDTO> voucherDTOPaginateDTO = voucherService.getVouchers(page, perPage, specification);
         return this.resPagination(voucherDTOPaginateDTO);
     }
 

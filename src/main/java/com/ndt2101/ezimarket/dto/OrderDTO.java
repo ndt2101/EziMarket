@@ -18,5 +18,6 @@ public class OrderDTO extends BaseDTO {
     private String status;
     private String noteToShop;
     private Payment payment;
+    private Long voucherId;
     private ShippingMethod shippingMethod;
 }

@@ -14,16 +14,15 @@ import com.ndt2101.ezimarket.specification.GenericSpecification;
 import com.ndt2101.ezimarket.specification.JoinCriteria;
 import com.ndt2101.ezimarket.specification.SearchCriteria;
 import com.ndt2101.ezimarket.specification.SearchOperation;
+import org.checkerframework.checker.units.qual.A;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.criteria.Join;
 import javax.persistence.criteria.JoinType;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepository> implements OrderService {
@@ -40,6 +39,12 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private UserRepository userRepository;
     @Autowired
     private OrderItemRepository orderItemRepository;
+    @Autowired
+    private VoucherRepository voucherRepository;
+    @Autowired
+    private AddressRepository addressRepository;
+    @Autowired
+    private ShippingMethodRepository shippingMethodRepository;
 
     @Autowired
     public OrderServiceImpl(OrderRepository repository) {
@@ -66,7 +71,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         });
 
         GenericSpecification<OrderItemEntity> orderItemSpecification = new GenericSpecification<OrderItemEntity>();
-        orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "productType", "id" , orderItemDTO.getProductTypeId(), JoinType.INNER));
+        orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "productType", "id", orderItemDTO.getProductTypeId(), JoinType.INNER));
         orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "order", "id", orderEntity.getId(), JoinType.INNER));
         OrderItemEntity orderItemEntity = orderItemRepository.findOne(orderItemSpecification).orElseGet(OrderItemEntity::new);
         Long quantity = orderItemEntity.getQuantity() + orderItemDTO.getQuantity();
@@ -92,6 +97,79 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         }
     }
 
+    @Override
+    public List<OrderDTO> checkOutCart(List<OrderDTO> orderDTOs) {
+        UserLoginDataEntity userEntity = userRepository.findById(orderDTOs.get(0).getUserDTO().getId()).orElseThrow(Common.userNotFound);
+        List<OrderItemEntity> confirmedOrderItems = new ArrayList<>();
+
+        orderDTOs.forEach(orderDTO -> {
+            OrderEntity orderEntity = orderRepository.findById(orderDTO.getId()).orElseThrow(Common.orderNotFound);
+            Set<Long> tillInCartProductTypeIds = orderEntity.getOrderItems().stream().map(orderItemEntity -> orderItemEntity.getProductType().getId()).collect(Collectors.toSet());
+            ShopEntity shopEntity = shopRepository.findById(orderDTO.getShop().getId()).orElseThrow(Common.shopNotFound);
+
+            orderDTO.getShop().getProductDTOList().forEach(productResponseDTO -> {
+                productResponseDTO.getProductTypes().forEach(productTypeDTO -> {
+                    tillInCartProductTypeIds.remove(productTypeDTO.getId()); // ket qua sau cung se la la cac productType chua duoc cormfirm(van trong cart)
+                });
+            });
+
+            Set<OrderItemEntity> tillInCartOrderItem = orderEntity.getOrderItems().stream().filter(orderItemEntity -> tillInCartProductTypeIds.contains(orderItemEntity.getProductType().getId())).collect(Collectors.toSet());
+
+            if (!tillInCartOrderItem.isEmpty()) {
+                OrderEntity newCart = new OrderEntity();
+                newCart.setShop(shopEntity);
+                newCart.setUser(userEntity);
+                newCart.setStatus(Common.ORDER_STATUS_IN_CART);
+                newCart = orderRepository.save(newCart);
+
+                OrderEntity finalNewCart = newCart;
+                tillInCartOrderItem.forEach(orderItemEntity -> {
+                    orderItemEntity.setOrder(finalNewCart);
+                    orderItemRepository.save(orderItemEntity);
+                    orderEntity.getOrderItems().remove(orderItemEntity);
+                });
+            }
+            OrderEntity savedOrderEntity = setupForOrderEntity(orderEntity, orderDTO);
+            confirmedOrderItems.addAll(orderRepository.save(savedOrderEntity).getOrderItems());
+        });
+        return formatResponseData(confirmedOrderItems);
+    }
+
+    private OrderEntity setupForOrderEntity(OrderEntity orderEntity, OrderDTO orderDTO) {
+        AtomicLong totalPrice = new AtomicLong(0L);
+
+        VoucherEntity voucherEntity = null;
+        if (orderDTO.getVoucherId() != null) {
+            GenericSpecification<VoucherEntity> voucherSpecification = new GenericSpecification<VoucherEntity>();
+            voucherSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "users", "id", orderDTO.getUserDTO().getId(), JoinType.LEFT));
+            voucherSpecification.add(new SearchCriteria("id", orderDTO.getVoucherId(), SearchOperation.EQUAL));
+            voucherEntity = voucherRepository.findOne(voucherSpecification).orElseThrow(Common.voucherNotFound);
+        }
+
+        orderEntity.setStatus(Common.ORDER_STATUS_CONFIRMING);
+        orderEntity.getOrderItems().forEach(orderItemEntity -> {
+            SaleProgramEntity saleProgramEntity = orderItemEntity.getProductType().getProduct().getSaleProgram();
+            if (saleProgramEntity != null && saleProgramEntity.getEndTime() > System.currentTimeMillis()) {
+                totalPrice.addAndGet(Math.round(orderItemEntity.getQuantity() * (orderItemEntity.getProductType().getPrice() - orderItemEntity.getProductType().getPrice() * saleProgramEntity.getDiscount())));
+            } else {
+                totalPrice.addAndGet(orderItemEntity.getQuantity() * orderItemEntity.getProductType().getPrice());
+            }
+        });
+        if (voucherEntity != null && totalPrice.get() >= voucherEntity.getPriceCondition() && voucherEntity.getEndTime() > System.currentTimeMillis() && Objects.equals(voucherEntity.getShop().getId(), orderEntity.getShop().getId())) {
+            totalPrice.getAndSet(Math.round(totalPrice.get() - totalPrice.get() * voucherEntity.getDiscount()));
+            voucherRepository.deleteUserVoucher(orderDTO.getUserDTO().getId(), orderDTO.getVoucherId());
+        }
+        orderEntity.setTotalPrice(totalPrice.get());
+        orderEntity.setNoteToShop(orderDTO.getNoteToShop());
+        orderEntity.setShipTo(addressRepository.findById(orderDTO.getShipTo().getId()).orElseThrow(Common.addressNotFound));
+
+        orderEntity.setShippingMethod(shippingMethodRepository.save(orderDTO.getShippingMethod()));
+
+        return orderEntity;
+    }
+
+//    TODO: chua test voi truong hop ap dung voucher va san pham co ct khuyen mai
+
     private ProductResponseDTO mapAndHandleSaleProgram(ProductEntity productEntity) {
         SaleProgramEntity saleProgram = productEntity.getSaleProgram();
         ProductResponseDTO productResponse = mapper.map(productEntity, ProductResponseDTO.class);
@@ -113,7 +191,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderItemEntities.forEach(orderItemEntity -> {
             ProductTypeEntity productTypeEntity = productTypeEntityMap.get(orderItemEntity.getProductType().getId());
             if (productTypeEntity == null) {
-                productTypeEntity =  orderItemEntity.getProductType();
+                productTypeEntity = orderItemEntity.getProductType();
                 productTypeEntity.setQuantity(orderItemEntity.getQuantity());
             } else {
                 Long quantity = productTypeEntity.getQuantity() + orderItemEntity.getQuantity();
@@ -198,5 +276,10 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderDTO.setUserDTO(userDTO);
         return orderDTO;
     }
+
+    /**
+     * Xóa item order -> addToCart quantity - current quantity (để quantity sau cùng = 0)
+     */
+
 
 }

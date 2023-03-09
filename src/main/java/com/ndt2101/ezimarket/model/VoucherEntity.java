@@ -28,7 +28,7 @@ public class VoucherEntity extends BaseEntity {
     @Column
     private Long priceCondition;
     @Column
-    private int saved;
+    private int saved = 0;
     @ManyToOne
     @JoinColumn(name = "shop_id")
     private ShopEntity shop;

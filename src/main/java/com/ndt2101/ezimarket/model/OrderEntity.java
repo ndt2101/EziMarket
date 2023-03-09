@@ -47,6 +47,6 @@ public class OrderEntity extends BaseEntity {
     @JoinColumn(name = "shipping_method_id")
     private ShippingMethod shippingMethod;
 
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     private Set<OrderItemEntity> orderItems = new HashSet<>();
 }
