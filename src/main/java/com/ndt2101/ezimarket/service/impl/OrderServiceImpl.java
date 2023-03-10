@@ -8,6 +8,7 @@ import com.ndt2101.ezimarket.dto.ShopDTO;
 import com.ndt2101.ezimarket.dto.UserDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.model.*;
+import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.OrderService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
@@ -45,6 +46,8 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private AddressRepository addressRepository;
     @Autowired
     private ShippingMethodRepository shippingMethodRepository;
+    @Autowired
+    private PaymentMethodRepository paymentMethodRepository;
 
     @Autowired
     public OrderServiceImpl(OrderRepository repository) {
@@ -135,8 +138,21 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         return formatResponseData(confirmedOrderItems);
     }
 
+    @Override
+    public OrderDTO confirmOrder(Long orderId) {
+        OrderEntity orderEntity = orderRepository.findById(orderId).orElseThrow(Common.orderNotFound);
+        orderEntity.getOrderItems().forEach(orderItemEntity -> {
+            orderItemEntity.getProductType().setQuantity(orderItemEntity.getProductType().getQuantity() - orderItemEntity.getQuantity());
+            productTypeRepository.save(orderItemEntity.getProductType());
+        });
+        orderEntity.setStatus(Common.ORDER_STATUS_PICKING);
+        orderEntity = orderRepository.save(orderEntity);
+        return formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0);
+    }
+
     private OrderEntity setupForOrderEntity(OrderEntity orderEntity, OrderDTO orderDTO) {
         AtomicLong totalPrice = new AtomicLong(0L);
+        PaymentMethod paymentMethod = paymentMethodRepository.findById(orderDTO.getPaymentMethod().getId()).orElseThrow(Common.paymentMethodNotFound);
 
         VoucherEntity voucherEntity = null;
         if (orderDTO.getVoucherId() != null) {
@@ -146,7 +162,16 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             voucherEntity = voucherRepository.findOne(voucherSpecification).orElseThrow(Common.voucherNotFound);
         }
 
-        orderEntity.setStatus(Common.ORDER_STATUS_CONFIRMING);
+        List<OrderItemEntity> checkOutOfStock = orderEntity.getOrderItems().stream().toList();
+
+        checkOutOfStock.forEach(orderItemEntity -> {
+            if (orderItemEntity.getProductType().getQuantity() <= 0) {
+                orderItemRepository.deleteById(orderItemEntity.getId());
+                productTypeRepository.deleteById(orderItemEntity.getProductType().getId());
+                orderEntity.getOrderItems().remove(orderItemEntity);
+            }
+        });
+
         orderEntity.getOrderItems().forEach(orderItemEntity -> {
             SaleProgramEntity saleProgramEntity = orderItemEntity.getProductType().getProduct().getSaleProgram();
             if (saleProgramEntity != null && saleProgramEntity.getEndTime() > System.currentTimeMillis()) {
@@ -159,9 +184,12 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             totalPrice.getAndSet(Math.round(totalPrice.get() - totalPrice.get() * voucherEntity.getDiscount()));
             voucherRepository.deleteUserVoucher(orderDTO.getUserDTO().getId(), orderDTO.getVoucherId());
         }
+
+        orderEntity.setStatus(Common.ORDER_STATUS_CONFIRMING);
         orderEntity.setTotalPrice(totalPrice.get());
         orderEntity.setNoteToShop(orderDTO.getNoteToShop());
         orderEntity.setShipTo(addressRepository.findById(orderDTO.getShipTo().getId()).orElseThrow(Common.addressNotFound));
+        orderEntity.setPaymentMethod(paymentMethod);
 
         orderEntity.setShippingMethod(shippingMethodRepository.save(orderDTO.getShippingMethod()));
 

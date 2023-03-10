@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.persistence.criteria.JoinType;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/shop")
@@ -26,7 +27,7 @@ public class ShopController extends BaseController<Object> {
     private ShopService shopService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody ShopDTO shopDTO, @RequestHeader(name = "Authorization") String token) throws ApplicationException {
+    public ResponseEntity<?> register(@RequestBody ShopDTO shopDTO, @RequestHeader(name = "Authorization") String token) throws ApplicationException, ExecutionException, InterruptedException {
         if (token.startsWith("Bearer ")) {
             token = token.substring(7);
             String loginName = jwtUtils.getLoginNameFromToken(token);

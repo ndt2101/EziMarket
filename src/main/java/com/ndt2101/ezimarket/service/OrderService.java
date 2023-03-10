@@ -8,4 +8,5 @@ import java.util.List;
 public interface OrderService {
     OrderDTO addToCart(OrderItemDTO orderItemDTO);
     List<OrderDTO> checkOutCart(List<OrderDTO> orderDTOs);
+    OrderDTO confirmOrder(Long orderId);
 }

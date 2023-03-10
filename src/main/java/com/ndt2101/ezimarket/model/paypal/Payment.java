@@ -18,23 +18,31 @@ import java.util.List;
 public class Payment {
     @Id
     private String id;
+
     @Column
     private String creatTime;
+
     @Column
     private String updateTime;
+
     @Column
     private String state;
+
     @Column
     private String intent;
+
     @ManyToOne
     @JoinColumn(name = "from_payer_id")
     private Payer from;
+
     @ManyToOne
     @JoinColumn(name = "to_payer_id")
     private Payer to;
+
     @OneToOne
     @JoinColumn(name = "transaction_id")
     private Transaction transaction;
+
     @OneToOne
     @JoinColumn(name = "order_id")
     private OrderEntity order;

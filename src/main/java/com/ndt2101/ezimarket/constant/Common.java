@@ -11,6 +11,10 @@ public class Common {
     public static final String DEFAULT_DATETIME_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
     public static final String ORDER_STATUS_IN_CART = "in_cart";
     public static final String ORDER_STATUS_CONFIRMING = "confirming";
+    public static final String ORDER_STATUS_PICKING = "picking";
+    public static final String CREATE_STORE_IN_GHN_API = "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shop/register";
+    public static final String GHN_TOKEN = "0a64e1dc-a1e6-11ed-b62e-2a5743127145";
+    public static final String GHN_CONTENT_TYPE = "application/json";
 
     public static final Supplier<NotFoundException> productTypeNotFound = () -> new NotFoundException("Product Type not found");
     public static final Supplier<NotFoundException> userNotFound = () -> new NotFoundException("User not found");
@@ -18,5 +22,7 @@ public class Common {
     public static final Supplier<NotFoundException> shopNotFound = () -> new NotFoundException("Shop not found");
     public static final Supplier<NotFoundException> voucherNotFound = () -> new NotFoundException("Voucher not found");
     public static final Supplier<NotFoundException> addressNotFound = () -> new NotFoundException("Voucher not found");
+    public static final Supplier<NotFoundException> paymentMethodNotFound = () -> new NotFoundException("Payment method not found");
+
 
 }

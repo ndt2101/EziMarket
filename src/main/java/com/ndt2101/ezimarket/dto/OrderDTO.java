@@ -3,6 +3,7 @@ package com.ndt2101.ezimarket.dto;
 import com.ndt2101.ezimarket.base.BaseDTO;
 import com.ndt2101.ezimarket.model.ShippingMethod;
 import com.ndt2101.ezimarket.model.paypal.Payment;
+import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import lombok.*;
 
 @AllArgsConstructor
@@ -20,4 +21,5 @@ public class OrderDTO extends BaseDTO {
     private Payment payment;
     private Long voucherId;
     private ShippingMethod shippingMethod;
+    private PaymentMethod paymentMethod;
 }

@@ -26,6 +26,9 @@ public class ShopEntity extends BaseEntity {
     @Column
     private Float rate;
 
+    @Column(name = "ghn_store_id")
+    private Integer GHNStoreId;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserLoginDataEntity userLoginData;

@@ -26,4 +26,5 @@ public class OrderController extends BaseController<Object> {
     public ResponseEntity<?> checkOutCart(@RequestBody List<OrderDTO> orderDTOs) {
         return successfulResponse(orderService.checkOutCart(orderDTOs));
     }
+
 }

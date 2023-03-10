@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.model;
 
 import com.ndt2101.ezimarket.base.BaseEntity;
 import com.ndt2101.ezimarket.model.paypal.Payment;
+import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,4 +50,8 @@ public class OrderEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     private Set<OrderItemEntity> orderItems = new HashSet<>();
+
+    @ManyToOne
+    @JoinColumn(name = "payemet_method_id")
+    private PaymentMethod paymentMethod;
 }
