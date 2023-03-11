@@ -19,7 +19,7 @@ import java.util.List;
 @Setter
 public class ShippingMethod extends BaseEntity {
     @Column
-    private String name;
+    private String name = "Giao hàng nhanh";
     @OneToOne(mappedBy = "shippingMethod", fetch = FetchType.LAZY)
     private OrderEntity order;
     @Column

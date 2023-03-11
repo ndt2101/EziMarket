@@ -48,10 +48,35 @@ public class OrderEntity extends BaseEntity {
     @JoinColumn(name = "shipping_method_id")
     private ShippingMethod shippingMethod;
 
-    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItemEntity> orderItems = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "payemet_method_id")
     private PaymentMethod paymentMethod;
+
+    @Column
+    private String code;
+
+    public OrderEntity clone(OrderEntity orderEntity) {
+        OrderEntity clone = new OrderEntity();
+        clone.setTotalPrice(orderEntity.totalPrice);
+        clone.setCode(orderEntity.code);
+        clone.setStatus(orderEntity.status);
+        clone.setPaymentMethod(orderEntity.paymentMethod);
+        clone.setPayment(orderEntity.payment);
+        clone.setShippingMethod(orderEntity.shippingMethod);
+        clone.setShipTo(orderEntity.shipTo);
+        clone.setNoteToShop(orderEntity.noteToShop);
+        clone.setOrderItems(orderEntity.orderItems);
+        clone.setShop(orderEntity.shop);
+        clone.setUser(orderEntity.user);
+        clone.setId(orderEntity.getId());
+        clone.setUpdatedTime(orderEntity.getUpdatedTime());
+        clone.setCreatedTime(orderEntity.getCreatedTime());
+        clone.setCreatedBy(orderEntity.getCreatedBy());
+        clone.setUpdatedBy(orderEntity.getUpdatedBy());
+
+        return clone;
+    }
 }

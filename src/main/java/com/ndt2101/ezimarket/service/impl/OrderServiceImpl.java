@@ -2,6 +2,9 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
+import com.ndt2101.ezimarket.dto.GHN.CreateOrderPayload;
+import com.ndt2101.ezimarket.dto.GHN.MappedOrderEntity;
+import com.ndt2101.ezimarket.dto.GHN.OrderData;
 import com.ndt2101.ezimarket.dto.OrderDTO;
 import com.ndt2101.ezimarket.dto.OrderItemDTO;
 import com.ndt2101.ezimarket.dto.ShopDTO;
@@ -15,21 +18,41 @@ import com.ndt2101.ezimarket.specification.GenericSpecification;
 import com.ndt2101.ezimarket.specification.JoinCriteria;
 import com.ndt2101.ezimarket.specification.SearchCriteria;
 import com.ndt2101.ezimarket.specification.SearchOperation;
-import org.checkerframework.checker.units.qual.A;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
+import org.springframework.web.client.RestTemplate;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+import javax.persistence.Query;
 import javax.persistence.criteria.JoinType;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepository> implements OrderService {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @Autowired
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     @Autowired
     private ModelMapper mapper;
     @Autowired
@@ -48,6 +71,10 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private ShippingMethodRepository shippingMethodRepository;
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Autowired
     public OrderServiceImpl(OrderRepository repository) {
@@ -77,13 +104,16 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "productType", "id", orderItemDTO.getProductTypeId(), JoinType.INNER));
         orderItemSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "order", "id", orderEntity.getId(), JoinType.INNER));
         OrderItemEntity orderItemEntity = orderItemRepository.findOne(orderItemSpecification).orElseGet(OrderItemEntity::new);
-        Long quantity = orderItemEntity.getQuantity() + orderItemDTO.getQuantity();
+        if (orderItemEntity.getItemQuantity() == null) {
+            orderItemEntity.setItemQuantity(0L);
+        }
+        Long quantity = orderItemEntity.getItemQuantity() + orderItemDTO.getItemQuantity();
 
-        if (quantity <= 0) {
+        if (quantity <= 0 && orderItemEntity.getId() != null) {
             orderItemRepository.deleteById(orderItemEntity.getId());
             orderEntity.getOrderItems().remove(orderItemEntity);
         } else {
-            orderItemEntity.setQuantity(quantity);
+            orderItemEntity.setItemQuantity(quantity);
             orderItemEntity.setOrder(orderEntity);
             orderItemEntity.setProductType(productTypeEntity);
 
@@ -139,15 +169,71 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     }
 
     @Override
-    public OrderDTO confirmOrder(Long orderId) {
+    @Transactional
+    public String confirmOrder(Long orderId) throws ExecutionException, InterruptedException, ParseException, CloneNotSupportedException {
         OrderEntity orderEntity = orderRepository.findById(orderId).orElseThrow(Common.orderNotFound);
+        MappedOrderEntity mappedOrderEntity = mapper.map(orderEntity, MappedOrderEntity.class);
+
+        OrderEntity cloneOrderEntity = mapper.map(mappedOrderEntity, OrderEntity.class);
+        OrderData ghnOrder = createGHNOrder(cloneOrderEntity);
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        ShippingMethod shippingMethod = orderEntity.getShippingMethod();
+        shippingMethod.setReceivedDay(sdf.parse(ghnOrder.getData().getExpected_delivery_time()));
+        shippingMethod.setPrice((long) ghnOrder.getData().getTotal_fee());
+
+        shippingMethod = shippingMethodRepository.save(shippingMethod);
+        orderEntity.setShippingMethod(shippingMethod);
+
+        orderEntity.setCode(ghnOrder.getData().getOrder_code());
+        orderEntity.setTotalPrice(ghnOrder.getData().getTotal_fee() + orderEntity.getTotalPrice());
+        if (orderEntity.getPaymentMethod().getId() == 1){
+            orderEntity.setStatus(Common.ORDER_STATUS_PICKING);
+        } else {
+            orderEntity.setStatus(Common.ORDER_STATUS_PAYING);
+        }
+        OrderEntity finalOrderEntity = orderEntity;
+        Map<Long, ProductTypeEntity> productTypeEntities = new HashMap<>();
         orderEntity.getOrderItems().forEach(orderItemEntity -> {
-            orderItemEntity.getProductType().setQuantity(orderItemEntity.getProductType().getQuantity() - orderItemEntity.getQuantity());
-            productTypeRepository.save(orderItemEntity.getProductType());
+            ProductTypeEntity productType = productTypeRepository.findById(orderItemEntity.getProductType().getId()).orElseThrow(Common.productTypeNotFound);
+            long newQuantity = productType.getQuantity() - orderItemEntity.getItemQuantity();
+            log.info("quantity: {}", newQuantity);
+            productType.setQuantity(newQuantity);
+            productType = productTypeRepository.save(orderItemEntity.getProductType());
+            productTypeEntities.put(orderItemEntity.getId(), productType);
         });
-        orderEntity.setStatus(Common.ORDER_STATUS_PICKING);
-        orderEntity = orderRepository.save(orderEntity);
-        return formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0);
+
+        orderEntity.getOrderItems().forEach(orderItemEntity -> {
+            log.info("quantity: {}", orderItemEntity.getProductType().getQuantity());
+            orderItemEntity.setProductType(productTypeEntities.get(orderItemEntity.getId()));
+        });
+
+//        finalOrderEntity.getOrderItems().forEach(orderItemEntity -> {
+//            log.info("quantity: {}", orderItemEntity.getProductType().getQuantity());
+//        });
+        orderEntity = orderRepository.save(finalOrderEntity);
+        return orderEntity.getCode();
+    }
+
+    private OrderData createGHNOrder(OrderEntity orderEntity) throws ExecutionException, InterruptedException{
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        Callable<OrderData> createStore = new Callable<OrderData>() {
+            @Override
+            public OrderData call() throws Exception {
+                RestTemplate restTemplate = new RestTemplate();
+                // Tạo header
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Token", Common.GHN_TOKEN);
+                headers.set("ShopId", String.valueOf(orderEntity.getShop().getGHNStoreId()));
+                headers.set("Content-Type", Common.GHN_CONTENT_TYPE);
+                // Tạo entity từ đối tượng request và header
+                HttpEntity<CreateOrderPayload> entity = new HttpEntity<>(CreateOrderPayload.createOrderPayload(orderEntity), headers);
+                ResponseEntity<OrderData> savedStore = restTemplate.exchange(Common.CREATE_ORDER_IN_GHN_API,  HttpMethod.POST, entity, OrderData.class);
+                return savedStore.getBody();
+            }
+        };
+        Future<OrderData> future = executorService.submit(createStore);
+        return future.get();
     }
 
     private OrderEntity setupForOrderEntity(OrderEntity orderEntity, OrderDTO orderDTO) {
@@ -175,9 +261,9 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderEntity.getOrderItems().forEach(orderItemEntity -> {
             SaleProgramEntity saleProgramEntity = orderItemEntity.getProductType().getProduct().getSaleProgram();
             if (saleProgramEntity != null && saleProgramEntity.getEndTime() > System.currentTimeMillis()) {
-                totalPrice.addAndGet(Math.round(orderItemEntity.getQuantity() * (orderItemEntity.getProductType().getPrice() - orderItemEntity.getProductType().getPrice() * saleProgramEntity.getDiscount())));
+                totalPrice.addAndGet(Math.round(orderItemEntity.getItemQuantity() * (orderItemEntity.getProductType().getPrice() - orderItemEntity.getProductType().getPrice() * saleProgramEntity.getDiscount())));
             } else {
-                totalPrice.addAndGet(orderItemEntity.getQuantity() * orderItemEntity.getProductType().getPrice());
+                totalPrice.addAndGet(orderItemEntity.getItemQuantity() * orderItemEntity.getProductType().getPrice());
             }
         });
         if (voucherEntity != null && totalPrice.get() >= voucherEntity.getPriceCondition() && voucherEntity.getEndTime() > System.currentTimeMillis() && Objects.equals(voucherEntity.getShop().getId(), orderEntity.getShop().getId())) {
@@ -190,9 +276,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderEntity.setNoteToShop(orderDTO.getNoteToShop());
         orderEntity.setShipTo(addressRepository.findById(orderDTO.getShipTo().getId()).orElseThrow(Common.addressNotFound));
         orderEntity.setPaymentMethod(paymentMethod);
-
         orderEntity.setShippingMethod(shippingMethodRepository.save(orderDTO.getShippingMethod()));
-
         return orderEntity;
     }
 
@@ -220,9 +304,9 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             ProductTypeEntity productTypeEntity = productTypeEntityMap.get(orderItemEntity.getProductType().getId());
             if (productTypeEntity == null) {
                 productTypeEntity = orderItemEntity.getProductType();
-                productTypeEntity.setQuantity(orderItemEntity.getQuantity());
+                productTypeEntity.setQuantity(orderItemEntity.getItemQuantity());
             } else {
-                Long quantity = productTypeEntity.getQuantity() + orderItemEntity.getQuantity();
+                Long quantity = productTypeEntity.getQuantity() + orderItemEntity.getItemQuantity();
                 productTypeEntity.setQuantity(quantity);
             }
             productTypeEntityMap.put(

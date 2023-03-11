@@ -22,4 +22,5 @@ public class OrderDTO extends BaseDTO {
     private Long voucherId;
     private ShippingMethod shippingMethod;
     private PaymentMethod paymentMethod;
+    private String code;
 }

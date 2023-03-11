@@ -8,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.ParseException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/order")
@@ -25,6 +27,11 @@ public class OrderController extends BaseController<Object> {
     @PutMapping("/checkout")
     public ResponseEntity<?> checkOutCart(@RequestBody List<OrderDTO> orderDTOs) {
         return successfulResponse(orderService.checkOutCart(orderDTOs));
+    }
+
+    @PutMapping("/confirm/{id}")
+    public ResponseEntity<?> confirmOrder(@PathVariable(name = "id") Long id) throws ParseException, ExecutionException, InterruptedException, CloneNotSupportedException {
+        return successfulResponse(orderService.confirmOrder(id));
     }
 
 }
