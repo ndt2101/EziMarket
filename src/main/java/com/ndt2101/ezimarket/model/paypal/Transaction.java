@@ -16,7 +16,6 @@ import javax.persistence.*;
 @Getter
 @Setter
 public class Transaction extends BaseEntity {
-
     @Column
     private Long amount;
     @Column
@@ -27,7 +26,7 @@ public class Transaction extends BaseEntity {
     private String authorizationId;
     @Column
     private String captureId;
-    @OneToOne
-    @JoinColumn(name = "refund_id")
+
+    @OneToOne(mappedBy = "transaction")
     private Refund refund;
 }

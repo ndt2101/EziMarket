@@ -33,5 +33,9 @@ public class OrderController extends BaseController<Object> {
     public ResponseEntity<?> confirmOrder(@PathVariable(name = "id") Long id) throws ParseException, ExecutionException, InterruptedException, CloneNotSupportedException {
         return successfulResponse(orderService.confirmOrder(id));
     }
+    @PutMapping("status/{orderId}/{status}")
+    public ResponseEntity<?> updateOrderStatus(@PathVariable(name = "orderId") Long orderId, @PathVariable(name = "status") String status) {
+        return successfulResponse(orderService.updateOrderStatus(orderId, status));
+    }
 
 }

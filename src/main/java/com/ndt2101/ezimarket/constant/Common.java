@@ -13,6 +13,10 @@ public class Common {
     public static final String ORDER_STATUS_CONFIRMING = "confirming";
     public static final String ORDER_STATUS_PICKING = "picking";
     public static final String ORDER_STATUS_PAYING = "paying";
+    public static final String ORDER_STATUS_DELIVERING = "delivering";
+    public static final String ORDER_STATUS_RECEIVED = "received";
+
+    public static final String ORDER_STATUS_CANCELED = "canceled";
     public static final String CREATE_STORE_IN_GHN_API = "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shop/register";
     public static final String CREATE_ORDER_IN_GHN_API = "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create";
 

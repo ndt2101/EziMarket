@@ -1,6 +1,7 @@
 package com.ndt2101.ezimarket.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.ndt2101.ezimarket.model.paypal.Payer;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -60,6 +61,9 @@ public class UserLoginDataEntity extends UserAccountEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     private List<CommentEntity> comments;
+
+    @OneToOne(mappedBy = "userLoginDataEntity", fetch = FetchType.LAZY)
+    private Payer payer;
 
 
 //    TODO: khi xóa user cũng xử lý tương tự xóa voucher để thực hiện xóa các liên kết user_voucher mà không xóa voucher

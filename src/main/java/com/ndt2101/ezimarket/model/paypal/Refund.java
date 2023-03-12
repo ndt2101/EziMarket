@@ -6,10 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.OneToOne;
-import javax.persistence.Table;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "refund")
@@ -24,6 +21,7 @@ public class Refund extends BaseEntity {
     private String currency;
     @Column
     private String reason;
-    @OneToOne(mappedBy = "refund")
+    @OneToOne
+    @JoinColumn(name = "transaction_id")
     private Transaction transaction;
 }

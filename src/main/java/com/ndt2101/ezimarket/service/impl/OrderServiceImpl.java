@@ -11,6 +11,7 @@ import com.ndt2101.ezimarket.dto.ShopDTO;
 import com.ndt2101.ezimarket.dto.UserDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.model.*;
+import com.ndt2101.ezimarket.model.paypal.Payer;
 import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.OrderService;
@@ -50,9 +51,6 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
 
     @Autowired
     private OrderRepository orderRepository;
-
-    @Autowired
-    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     @Autowired
     private ModelMapper mapper;
     @Autowired
@@ -71,17 +69,18 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private ShippingMethodRepository shippingMethodRepository;
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
-    @PersistenceContext
-    private EntityManager entityManager;
     @Autowired
-    private PlatformTransactionManager transactionManager;
-
+    private PayerRepository payerRepository;
+    @Autowired
+    private TransactionRepository transactionRepository;
+    @Autowired
+    private PaymentRepository paymentRepository;
+    @Autowired
+    private RefundRepository refundRepository;
     @Autowired
     public OrderServiceImpl(OrderRepository repository) {
         super(repository);
     }
-
-
     @Override
     public OrderDTO addToCart(OrderItemDTO orderItemDTO) {
         ProductTypeEntity productTypeEntity = productTypeRepository.findById(orderItemDTO.getProductTypeId()).orElseThrow(Common.productTypeNotFound);
@@ -170,7 +169,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
 
     @Override
     @Transactional
-    public String confirmOrder(Long orderId) throws ExecutionException, InterruptedException, ParseException, CloneNotSupportedException {
+    public String confirmOrder(Long orderId) throws ExecutionException, InterruptedException, ParseException {
         OrderEntity orderEntity = orderRepository.findById(orderId).orElseThrow(Common.orderNotFound);
         MappedOrderEntity mappedOrderEntity = mapper.map(orderEntity, MappedOrderEntity.class);
 
@@ -197,22 +196,58 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderEntity.getOrderItems().forEach(orderItemEntity -> {
             ProductTypeEntity productType = productTypeRepository.findById(orderItemEntity.getProductType().getId()).orElseThrow(Common.productTypeNotFound);
             long newQuantity = productType.getQuantity() - orderItemEntity.getItemQuantity();
-            log.info("quantity: {}", newQuantity);
             productType.setQuantity(newQuantity);
             productType = productTypeRepository.save(orderItemEntity.getProductType());
             productTypeEntities.put(orderItemEntity.getId(), productType);
         });
 
         orderEntity.getOrderItems().forEach(orderItemEntity -> {
-            log.info("quantity: {}", orderItemEntity.getProductType().getQuantity());
             orderItemEntity.setProductType(productTypeEntities.get(orderItemEntity.getId()));
         });
 
-//        finalOrderEntity.getOrderItems().forEach(orderItemEntity -> {
-//            log.info("quantity: {}", orderItemEntity.getProductType().getQuantity());
-//        });
         orderEntity = orderRepository.save(finalOrderEntity);
         return orderEntity.getCode();
+    }
+
+    @Override
+    public OrderDTO updateOrderStatus(Long orderId, String orderStatus) { // only for status cancel, delivering, received
+        OrderEntity orderEntity = orderRepository.findById(orderId).orElseThrow(Common.orderNotFound);
+        if (orderStatus.equals(Common.ORDER_STATUS_CANCELED)) {
+//            TODO: base on current status to handle quantity of product type in order
+            String currentStatus = orderEntity.getStatus();
+            if (currentStatus.equals(Common.ORDER_STATUS_DELIVERING) || currentStatus.equals(Common.ORDER_STATUS_PICKING) || currentStatus.equals(Common.ORDER_STATUS_PAYING)) {
+                orderEntity.getOrderItems().forEach(orderItemEntity -> {
+                    ProductTypeEntity productType = productTypeRepository.findById(orderItemEntity.getProductType().getId()).orElseThrow(Common.productTypeNotFound);
+                    long newQuantity = productType.getQuantity() + orderItemEntity.getItemQuantity();
+                    productType.setQuantity(newQuantity);
+                    productTypeRepository.save(productType);
+                });
+            }
+            orderEntity.setStatus(Common.ORDER_STATUS_CANCELED);
+        }
+        if (orderStatus.equals(Common.ORDER_STATUS_DELIVERING) && orderEntity.getStatus().equals(Common.ORDER_STATUS_PICKING)) {
+            orderEntity.setStatus(Common.ORDER_STATUS_DELIVERING);
+        }
+        if (orderStatus.equals(Common.ORDER_STATUS_RECEIVED) && orderEntity.getStatus().equals(Common.ORDER_STATUS_DELIVERING)) {
+            orderEntity.setStatus(Common.ORDER_STATUS_RECEIVED);
+        }
+        // save order after update to database
+        orderEntity = orderRepository.save(orderEntity);
+        OrderDTO orderDTO = formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0);
+        return orderDTO;
+    }
+
+    /* TODO: chua lam
+     * check payer co ton tai hay khong
+     * neu khong thi luu payer truoc
+     * sau do save transaction
+     * khi tra lai thi save refund, save refund thi cac truong da xo du het, chi can lay ra de set
+     */
+    @Override
+    public OrderDTO paypalCheckout(OrderDTO orderDTO) {
+        OrderEntity orderEntity = orderRepository.findById(orderDTO.getId()).orElseThrow(Common.orderNotFound);
+        Payer formPayer = payerRepository.findByUserLoginDataEntity_Id(orderDTO.getUserDTO().getId()).orElse(orderDTO.getPayment().getFrom());
+        return null;
     }
 
     private OrderData createGHNOrder(OrderEntity orderEntity) throws ExecutionException, InterruptedException{
@@ -373,6 +408,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             OrderDTO orderDTO = mapper.map(orderEntity, OrderDTO.class);
             orderDTO.setShop(shopDTOMap.get(orderEntity.getShop().getId()));
             setUserDTO(orderDTO, orderEntity);
+            orderDTO.getShippingMethod().setOrder(null);
             orderDTOs.add(orderDTO);
         });
 
@@ -392,6 +428,4 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     /**
      * Xóa item order -> addToCart quantity - current quantity (để quantity sau cùng = 0)
      */
-
-
 }

@@ -17,8 +17,8 @@ import java.util.List;
 @Setter
 public class Payment {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private String id;
-
     @Column
     private String creatTime;
 
