@@ -34,7 +34,7 @@ public class OrderController extends BaseController<Object> {
         return successfulResponse(orderService.confirmOrder(id));
     }
     @PutMapping("status/{orderId}/{status}")
-    public ResponseEntity<?> updateOrderStatus(@PathVariable(name = "orderId") Long orderId, @PathVariable(name = "status") String status) {
+    public ResponseEntity<?> updateOrderStatus(@PathVariable(name = "orderId") Long orderId, @PathVariable(name = "status") String status) throws ExecutionException, InterruptedException {
         return successfulResponse(orderService.updateOrderStatus(orderId, status));
     }
 

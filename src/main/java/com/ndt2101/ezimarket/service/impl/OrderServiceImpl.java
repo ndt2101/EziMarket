@@ -2,9 +2,7 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
-import com.ndt2101.ezimarket.dto.GHN.CreateOrderPayload;
-import com.ndt2101.ezimarket.dto.GHN.MappedOrderEntity;
-import com.ndt2101.ezimarket.dto.GHN.OrderData;
+import com.ndt2101.ezimarket.dto.GHN.*;
 import com.ndt2101.ezimarket.dto.OrderDTO;
 import com.ndt2101.ezimarket.dto.OrderItemDTO;
 import com.ndt2101.ezimarket.dto.ShopDTO;
@@ -210,20 +208,25 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     }
 
     @Override
-    public OrderDTO updateOrderStatus(Long orderId, String orderStatus) { // only for status cancel, delivering, received
+    public OrderDTO updateOrderStatus(Long orderId, String orderStatus) throws ExecutionException, InterruptedException { // only for status cancel, delivering, received
         OrderEntity orderEntity = orderRepository.findById(orderId).orElseThrow(Common.orderNotFound);
         if (orderStatus.equals(Common.ORDER_STATUS_CANCELED)) {
 //            TODO: base on current status to handle quantity of product type in order
             String currentStatus = orderEntity.getStatus();
             if (currentStatus.equals(Common.ORDER_STATUS_DELIVERING) || currentStatus.equals(Common.ORDER_STATUS_PICKING) || currentStatus.equals(Common.ORDER_STATUS_PAYING)) {
-                orderEntity.getOrderItems().forEach(orderItemEntity -> {
-                    ProductTypeEntity productType = productTypeRepository.findById(orderItemEntity.getProductType().getId()).orElseThrow(Common.productTypeNotFound);
-                    long newQuantity = productType.getQuantity() + orderItemEntity.getItemQuantity();
-                    productType.setQuantity(newQuantity);
-                    productTypeRepository.save(productType);
-                });
+                String cancelGHNOrderStatus = cancelGHNOrder(orderEntity.getCode(), String.valueOf(orderEntity.getShop().getGHNStoreId()));
+                if (cancelGHNOrderStatus.equals("OK")){
+                    orderEntity.getOrderItems().forEach(orderItemEntity -> {
+                        ProductTypeEntity productType = productTypeRepository.findById(orderItemEntity.getProductType().getId()).orElseThrow(Common.productTypeNotFound);
+                        long newQuantity = productType.getQuantity() + orderItemEntity.getItemQuantity();
+                        productType.setQuantity(newQuantity);
+                        productTypeRepository.save(productType);
+                    });
+                    orderEntity.setStatus(Common.ORDER_STATUS_CANCELED);
+                }
+            } else if (currentStatus.equals(Common.ORDER_STATUS_CONFIRMING)) {
+                orderEntity.setStatus(Common.ORDER_STATUS_CANCELED);
             }
-            orderEntity.setStatus(Common.ORDER_STATUS_CANCELED);
         }
         if (orderStatus.equals(Common.ORDER_STATUS_DELIVERING) && orderEntity.getStatus().equals(Common.ORDER_STATUS_PICKING)) {
             orderEntity.setStatus(Common.ORDER_STATUS_DELIVERING);
@@ -235,6 +238,29 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         orderEntity = orderRepository.save(orderEntity);
         OrderDTO orderDTO = formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0);
         return orderDTO;
+    }
+
+    private String cancelGHNOrder(String orderCode, String ghnShopId) throws ExecutionException, InterruptedException {
+        List<String> order_codes = new ArrayList<>();
+        order_codes.add(orderCode);
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        Callable<String> createStore = new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                RestTemplate restTemplate = new RestTemplate();
+                // Tạo header
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Token", Common.GHN_TOKEN);
+                headers.set("ShopId", ghnShopId);
+                headers.set("Content-Type", Common.GHN_CONTENT_TYPE);
+                // Tạo entity từ đối tượng request và header
+                HttpEntity<CancelOrderPayload> entity = new HttpEntity<>(new CancelOrderPayload(order_codes), headers);
+                ResponseEntity<GHNResponse> savedStore = restTemplate.exchange(Common.CANCEL_ORDER_IN_GHN_API,  HttpMethod.POST, entity, GHNResponse.class);
+                return (String) ((ArrayList<LinkedHashMap>) savedStore.getBody().getData()).get(0).get("message");
+            }
+        };
+        Future<String> future = executorService.submit(createStore);
+        return future.get();
     }
 
     /* TODO: chua lam
@@ -249,6 +275,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         Payer formPayer = payerRepository.findByUserLoginDataEntity_Id(orderDTO.getUserDTO().getId()).orElse(orderDTO.getPayment().getFrom());
         return null;
     }
+
 
     private OrderData createGHNOrder(OrderEntity orderEntity) throws ExecutionException, InterruptedException{
         ExecutorService executorService = Executors.newFixedThreadPool(1);
