@@ -13,9 +13,12 @@ import com.ndt2101.ezimarket.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.*;
 
 import javax.persistence.criteria.JoinType;
+import javax.servlet.http.HttpServletRequest;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -46,5 +49,16 @@ public class ShopController extends BaseController<Object> {
             specification.add(new SearchCriteria("id", id, SearchOperation.EQUAL));
         }
         return successfulResponse(shopService.getShop(specification));
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getShops(
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "perPage", required = false) Integer perPage,
+            HttpServletRequest request
+    ) {
+        GenericSpecification<ShopEntity> specification = new GenericSpecification<ShopEntity>();
+        specification = specification.getBasicQuery(request);
+        return successfulListResponse(Collections.singletonList(shopService.getShops(page, perPage, specification)));
     }
 }

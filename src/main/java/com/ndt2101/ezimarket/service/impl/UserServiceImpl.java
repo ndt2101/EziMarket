@@ -1,6 +1,8 @@
 package com.ndt2101.ezimarket.service.impl;
 
+import com.ndt2101.ezimarket.constant.Common;
 import com.ndt2101.ezimarket.dto.AddressDTO;
+import com.ndt2101.ezimarket.dto.CurrentDeviceDTO;
 import com.ndt2101.ezimarket.dto.PasswordChangeDTO;
 import com.ndt2101.ezimarket.exception.ApplicationException;
 import com.ndt2101.ezimarket.exception.NotFoundException;
@@ -15,6 +17,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -73,6 +76,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public String setCurrentDevice(CurrentDeviceDTO currentDeviceDTO) {
+        UserLoginDataEntity userLoginDataEntity = userRepository.findById(currentDeviceDTO.getUserId()).orElseThrow(Common.userNotFound);
+        userLoginDataEntity.setCurrentDevice(currentDeviceDTO.getToken());
+        userLoginDataEntity = userRepository.save(userLoginDataEntity);
+        return userLoginDataEntity.getCurrentDevice();
+    }
+
+    @Override
     public AddressDTO getLocation(String loginName) {
         UserLoginDataEntity userLoginData = userRepository.findByLoginName(loginName).orElseThrow(() -> new NotFoundException("User " + loginName + " not found"));
         if (userLoginData.getAddress() != null) {
@@ -81,5 +92,11 @@ public class UserServiceImpl implements UserService {
             return null;
         }
     }
+
+    @Override
+    public String getCurrentDevice(Long userId) {
+        return userRepository.findById(userId).orElseThrow(Common.userNotFound).getCurrentDevice();
+    }
+
 
 }

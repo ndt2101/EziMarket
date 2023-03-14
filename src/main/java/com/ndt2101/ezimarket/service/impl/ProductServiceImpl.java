@@ -143,7 +143,7 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
     }
 
     @Transactional
-    void deleteProductType(List<Long> deletedIds) {
+    public void deleteProductType(List<Long> deletedIds) {
         TransactionStatus transaction = transactionManager.getTransaction(new DefaultTransactionDefinition());
         Query query = entityManager.createQuery("delete from ProductTypeEntity p where p.id in :deletedIds");
         query.setParameter("deletedIds", deletedIds);

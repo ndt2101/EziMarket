@@ -65,6 +65,8 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @OneToOne(mappedBy = "userLoginDataEntity", fetch = FetchType.LAZY)
     private Payer payer;
 
+    @Column
+    private String currentDevice;
 
 //    TODO: khi xóa user cũng xử lý tương tự xóa voucher để thực hiện xóa các liên kết user_voucher mà không xóa voucher
 }

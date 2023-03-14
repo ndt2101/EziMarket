@@ -1,9 +1,12 @@
 package com.ndt2101.ezimarket.service.impl;
 
+import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
 import com.ndt2101.ezimarket.dto.GHN.GHNResponse;
 import com.ndt2101.ezimarket.dto.GHN.Store;
 import com.ndt2101.ezimarket.dto.ShopDTO;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
+import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.exception.ApplicationException;
 import com.ndt2101.ezimarket.exception.NotFoundException;
 import com.ndt2101.ezimarket.model.ShopEntity;
@@ -12,21 +15,24 @@ import com.ndt2101.ezimarket.repository.RoleRepository;
 import com.ndt2101.ezimarket.repository.ShopRepository;
 import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.service.ShopService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.mail.MessagingException;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 @Service
-public class ShopServiceImpl implements ShopService {
+public class ShopServiceImpl extends BasePagination<ShopEntity, ShopRepository> implements ShopService {
 
     @Autowired
     private ShopRepository shopRepository;
@@ -36,6 +42,10 @@ public class ShopServiceImpl implements ShopService {
     private UserRepository userRepository;
     @Autowired
     private RoleRepository roleRepository;
+    @Autowired
+    public ShopServiceImpl(ShopRepository repository) {
+        super(repository);
+    }
     @Override
     public String register(ShopDTO shopDTO, String loginName) throws ExecutionException, InterruptedException {
         UserLoginDataEntity userLoginData = userRepository.findByLoginName(loginName).orElseThrow(() -> new NotFoundException("User " + loginName + " not found"));
@@ -87,4 +97,16 @@ public class ShopServiceImpl implements ShopService {
         return shopDTO;
     }
 
+    @Override
+    public PaginateDTO<ShopDTO> getShops(Integer page, Integer perPage, GenericSpecification<ShopEntity> specification) {
+        PaginateDTO<ShopEntity> shopEntityPaginateDTO = this.paginate(page, perPage, specification);
+        List<ShopDTO> shopDTOs = shopEntityPaginateDTO.getPageData().stream().map(shopEntity -> {
+            ShopDTO shopDTO = mapper.map(shopEntity, ShopDTO.class);
+            shopDTO.setAvatar(shopEntity.getUserLoginData().getAvatarUrl());
+            shopDTO.setId(shopEntity.getUserLoginData().getId()); // lay id cua user
+            return shopDTO;
+        }).toList();
+        Page<ShopDTO> pageData = new PageImpl<>(shopDTOs, PageRequest.of(page, perPage), perPage);
+        return new PaginateDTO<>(pageData, shopEntityPaginateDTO.getPagination());
+    }
 }

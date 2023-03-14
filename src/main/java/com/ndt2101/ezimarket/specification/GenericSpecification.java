@@ -49,8 +49,7 @@ public class GenericSpecification <T> implements Specification<T> {
         for (Map.Entry<String, String[]> item : request.getParameterMap().entrySet()) {
             if (item.getKey().contains("like")) {
                 specification.add(new SearchCriteria(
-//                        StringUtils.substringBetween(item.getKey(), "[", "]"),
-                        item.getKey(),
+                        StringUtils.substringBeforeLast(item.getKey(), "_"),
                         StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
                         SearchOperation.LIKE));
             }

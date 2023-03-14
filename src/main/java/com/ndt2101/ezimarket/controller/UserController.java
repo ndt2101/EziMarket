@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.controller;
 
 import com.ndt2101.ezimarket.base.BaseController;
 import com.ndt2101.ezimarket.dto.AddressDTO;
+import com.ndt2101.ezimarket.dto.CurrentDeviceDTO;
 import com.ndt2101.ezimarket.dto.PasswordChangeDTO;
 import com.ndt2101.ezimarket.exception.ApplicationException;
 import com.ndt2101.ezimarket.service.UserService;
@@ -52,5 +53,15 @@ public class UserController extends BaseController<Object> {
         } else {
             throw new ApplicationException(HttpStatus.FORBIDDEN, "Response with unauthorized error");
         }
+    }
+
+    @PostMapping("/current_device")
+    public ResponseEntity<?> setUserDevice(@RequestBody CurrentDeviceDTO currentDeviceDTO) {
+        return successfulResponse(userService.setCurrentDevice(currentDeviceDTO));
+    }
+
+    @GetMapping("/current_device/{userId}")
+    public ResponseEntity<?> getUserDevice(@RequestParam(name = "userId") Long userId) {
+        return successfulResponse(userService.getCurrentDevice(userId));
     }
 }
