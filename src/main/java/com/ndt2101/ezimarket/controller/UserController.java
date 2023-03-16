@@ -60,8 +60,10 @@ public class UserController extends BaseController<Object> {
         return successfulResponse(userService.setCurrentDevice(currentDeviceDTO));
     }
 
-    @GetMapping("/current_device/{userId}")
+    @GetMapping("/current_device/")
     public ResponseEntity<?> getUserDevice(@RequestParam(name = "userId") Long userId) {
         return successfulResponse(userService.getCurrentDevice(userId));
     }
+
+
 }

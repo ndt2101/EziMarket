@@ -51,7 +51,7 @@ public class ShopController extends BaseController<Object> {
         return successfulResponse(shopService.getShop(specification));
     }
 
-    @GetMapping
+    @GetMapping("/")
     public ResponseEntity<?> getShops(
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage,
@@ -59,6 +59,6 @@ public class ShopController extends BaseController<Object> {
     ) {
         GenericSpecification<ShopEntity> specification = new GenericSpecification<ShopEntity>();
         specification = specification.getBasicQuery(request);
-        return successfulListResponse(Collections.singletonList(shopService.getShops(page, perPage, specification)));
+        return resPagination(shopService.getShops(page, perPage, specification));
     }
 }

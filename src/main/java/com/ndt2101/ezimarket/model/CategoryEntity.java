@@ -35,6 +35,6 @@ public class CategoryEntity extends BaseEntity {
     @Column
     private String coverImage;
 
-    @OneToMany(mappedBy = "category")
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
     private List<ProductEntity> product;
 }
