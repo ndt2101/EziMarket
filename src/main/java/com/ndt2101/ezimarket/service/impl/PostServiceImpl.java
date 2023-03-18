@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
+import com.ndt2101.ezimarket.dto.ImageDTO;
 import com.ndt2101.ezimarket.dto.LikeDTO;
 import com.ndt2101.ezimarket.dto.PostDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
@@ -81,7 +82,7 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
             postDTO.getVoucher().setImg(shopEntity.getUserLoginData().getAvatarUrl());
             postDTO.getShop().setAvatar(shopEntity.getUserLoginData().getAvatarUrl());
             postDTO.setImageUrl(imageEntity.getUrl());
-            postDTO.getProduct().setImages(List.of(productEntity.getImageEntities().get(0).getUrl()));
+            postDTO.getProduct().setImages(List.of(mapper.map(productEntity.getImageEntities().get(0), ImageDTO.class)));
             return postDTO;
         } catch (Exception e) {
             e.printStackTrace();
@@ -139,7 +140,7 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
                     if ( postEntity.getImage()!=null ){
                         postDTO.setImageUrl(postEntity.getImage().getUrl());
                     }
-                    postDTO.getProduct().setImages(List.of(postEntity.getProduct().getImageEntities().get(0).getUrl()));
+                    postDTO.getProduct().setImages(List.of(mapper.map(postEntity.getProduct().getImageEntities().get(0), ImageDTO.class)));
                     postDTO.setLikes(new LikeDTO(postEntity.getId(), userId, postEntity.getLikes().size(), postEntity.getLikes().contains(user)));
                     if (postEntity.getVoucher().getQuantity() <= postEntity.getVoucher().getSaved() || postEntity.getVoucher().getEndTime() < System.currentTimeMillis()) {
                         postDTO.setVoucher(null);

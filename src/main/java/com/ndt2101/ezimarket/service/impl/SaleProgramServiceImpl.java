@@ -1,6 +1,7 @@
 package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
+import com.ndt2101.ezimarket.dto.ImageDTO;
 import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginationDTO;
@@ -115,7 +116,7 @@ public class SaleProgramServiceImpl extends BasePagination<SaleProgramEntity, Sa
         SaleProgramDTO saleProgramResponse = mapper.map(saleProgramEntity, SaleProgramDTO.class);
         List<ProductResponseDTO> productResponseDTOs = saleProgramEntity.getProducts().stream().map(productEntity -> {
             ProductResponseDTO productResponseDTO = mapper.map(productEntity, ProductResponseDTO.class);
-            productResponseDTO.setImages(new ArrayList<>(List.of(productEntity.getImageEntities().get(0).getUrl())));
+            productResponseDTO.setImages(new ArrayList<>(List.of(mapper.map(productEntity.getImageEntities().get(0), ImageDTO.class))));
             return productResponseDTO;
         }).toList();
         saleProgramResponse.setProducts(productResponseDTOs);

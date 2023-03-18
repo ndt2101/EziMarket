@@ -26,5 +26,5 @@ public class ProductPayLoadDTO extends BaseDTO {
     private float width;
     private float height;
     private float length;
-    private List<MultipartFile> images;//
+    private List<Long> images;//
 }

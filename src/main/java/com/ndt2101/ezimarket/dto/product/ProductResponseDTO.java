@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.dto.product;
 
 import com.ndt2101.ezimarket.base.BaseDTO;
 import com.ndt2101.ezimarket.dto.CategoryDTO;
+import com.ndt2101.ezimarket.dto.ImageDTO;
 import com.ndt2101.ezimarket.dto.ShopDTO;
 import lombok.*;
 
@@ -22,5 +23,9 @@ public class ProductResponseDTO extends BaseDTO {
     private Float rate;
     private Long soldNumber;
     private ShopDTO shop;
-    private List<String> images;
+    private List<ImageDTO> images;
+    private Float weight;
+    private Float width;
+    private Float height;
+    private Float length;
 }

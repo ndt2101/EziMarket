@@ -2,11 +2,8 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
+import com.ndt2101.ezimarket.dto.*;
 import com.ndt2101.ezimarket.dto.GHN.*;
-import com.ndt2101.ezimarket.dto.OrderDTO;
-import com.ndt2101.ezimarket.dto.OrderItemDTO;
-import com.ndt2101.ezimarket.dto.ShopDTO;
-import com.ndt2101.ezimarket.dto.UserDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.model.paypal.Payer;
@@ -353,7 +350,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             }
         }
         if (productEntity.getImageEntities().get(0) != null) {
-            productResponse.setImages(List.of(productEntity.getImageEntities().get(0).getUrl()));
+            productResponse.setImages(List.of(mapper.map(productEntity.getImageEntities().get(0), ImageDTO.class)));
         }
         productResponse.getShop().setAvatar(productEntity.getShop().getUserLoginData().getAvatarUrl());
         return productResponse;
