@@ -7,10 +7,13 @@ import com.ndt2101.ezimarket.dto.pagination.PaginationDTO;
 import com.ndt2101.ezimarket.model.SaleProgramEntity;
 import com.ndt2101.ezimarket.service.SaleProgramService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
+import com.ndt2101.ezimarket.specification.JoinCriteria;
+import com.ndt2101.ezimarket.specification.SearchOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.persistence.criteria.JoinType;
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
@@ -43,8 +46,14 @@ public class SaleProgramController extends BaseController<Object> {
     @GetMapping()
     public ResponseEntity<?> getSaleProgram(
             @RequestParam(name = "page", required = false) Integer page,
-            @RequestParam(name = "perPage", required = false) Integer perPage) {
-        PaginateDTO<SaleProgramDTO> saleProgramEntities = saleProgramService.getSalePrograms(page, perPage);
+            @RequestParam(name = "perPage", required = false) Integer perPage,
+            @RequestParam(name = "shopId", required = false) Integer shopId,
+            HttpServletRequest request) {
+        GenericSpecification<SaleProgramEntity> specification = new GenericSpecification<SaleProgramEntity>();
+        specification.buildJoin(
+                new JoinCriteria(SearchOperation.EQUAL, "shop", "id", shopId, JoinType.INNER)
+        );
+        PaginateDTO<SaleProgramDTO> saleProgramEntities = saleProgramService.getSalePrograms(page, perPage, specification);
         return this.resPagination(saleProgramEntities);
     }
 }

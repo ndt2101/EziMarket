@@ -4,10 +4,9 @@ import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.dto.ImageDTO;
 import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
-import com.ndt2101.ezimarket.dto.pagination.PaginationDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
+import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
-import com.ndt2101.ezimarket.model.ImageEntity;
 import com.ndt2101.ezimarket.model.ProductEntity;
 import com.ndt2101.ezimarket.model.SaleProgramEntity;
 import com.ndt2101.ezimarket.model.ShopEntity;
@@ -21,12 +20,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import javax.persistence.EntityManager;
@@ -138,10 +135,27 @@ public class SaleProgramServiceImpl extends BasePagination<SaleProgramEntity, Sa
     }
 
     @Override
-    public PaginateDTO<SaleProgramDTO> getSalePrograms(int page, int perPage) {
-        PaginateDTO<SaleProgramEntity> saleProgramEntityPaginateDTO = this.paginate(page, perPage);
+    public PaginateDTO<SaleProgramDTO> getSalePrograms(int page, int perPage, GenericSpecification<SaleProgramEntity> specification) {
+        PaginateDTO<SaleProgramEntity> saleProgramEntityPaginateDTO = this.paginate(page, perPage, specification);
         List<SaleProgramDTO> saleProgramDTOs = saleProgramEntityPaginateDTO.getPageData().stream()
-                .map(saleProgramEntity -> mapper.map(saleProgramEntity, SaleProgramDTO.class))
+                .map(saleProgramEntity -> {
+                    SaleProgramDTO saleProgramDTO = mapper.map(saleProgramEntity, SaleProgramDTO.class);
+                    saleProgramDTO.setShopId(saleProgramEntity.getShop().getId());
+                    List<ProductResponseDTO> productDTOs = new ArrayList<>();
+
+                    saleProgramEntity.getProducts().forEach(productEntity -> {
+                        ProductResponseDTO productResponseDTO = mapper.map(productEntity, ProductResponseDTO.class);
+                        List<ImageDTO> imageDTOs = new ArrayList<>();
+                        ImageDTO imageDTO = new ImageDTO();
+                        imageDTO.setId(productEntity.getImageEntities().get(0).getId());
+                        imageDTO.setUrl(productEntity.getImageEntities().get(0).getUrl());
+                        imageDTOs.add(imageDTO);
+                        productResponseDTO.setImages(imageDTOs);
+                        productDTOs.add(productResponseDTO);
+                    });
+                    saleProgramDTO.setProducts(productDTOs);
+                    return saleProgramDTO;
+                })
                 .toList();
         Page<SaleProgramDTO> pageData = new PageImpl<>(saleProgramDTOs, PageRequest.of(page, perPage), perPage);
         return new PaginateDTO<>(pageData, saleProgramEntityPaginateDTO.getPagination());
