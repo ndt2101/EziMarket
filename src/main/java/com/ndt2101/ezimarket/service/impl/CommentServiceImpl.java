@@ -59,7 +59,7 @@ public class CommentServiceImpl extends BasePagination<CommentEntity, CommentRep
 
     private CommentDTO mapParentAndChildrenDTO(CommentEntity commentEntity) {
         CommentDTO commentDTO = mapCommentDTO(commentEntity);
-
+        commentDTO.setCreatedTime(commentEntity.getCreatedTime().getTime());
         List<CommentDTO> childrenDTOs = new ArrayList<>();
         if (commentEntity.getChildren() != null) {
             commentEntity.getChildren().forEach(children -> {
@@ -90,7 +90,7 @@ public class CommentServiceImpl extends BasePagination<CommentEntity, CommentRep
             commentDTO.setParentId(commentEntity.getParent().getId());
         }
         commentDTO.setPostId(commentEntity.getPost().getId());
-        commentDTO.setCreatedTime(commentEntity.getCreatedTime());
+        commentDTO.setCreatedTime(commentEntity.getCreatedTime().getTime());
         return commentDTO;
     }
 

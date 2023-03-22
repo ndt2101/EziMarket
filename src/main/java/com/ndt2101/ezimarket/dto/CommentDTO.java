@@ -18,5 +18,5 @@ public class CommentDTO extends BaseDTO {
     private UserDTO user;
     private Long parentId;
     private List<CommentDTO> children = new ArrayList<>();
-    private Date createdTime;
+    private Long createdTime;
 }
