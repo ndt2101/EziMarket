@@ -2,6 +2,7 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
+import com.ndt2101.ezimarket.dto.CommentDTO;
 import com.ndt2101.ezimarket.dto.ImageDTO;
 import com.ndt2101.ezimarket.dto.LikeDTO;
 import com.ndt2101.ezimarket.dto.PostDTO;
@@ -12,6 +13,7 @@ import com.ndt2101.ezimarket.exception.ApplicationException;
 import com.ndt2101.ezimarket.exception.NotFoundException;
 import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.repository.*;
+import com.ndt2101.ezimarket.service.CommentService;
 import com.ndt2101.ezimarket.service.PostService;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
 import com.ndt2101.ezimarket.specification.JoinCriteria;
@@ -28,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.persistence.criteria.JoinType;
 import java.io.File;
 import java.util.List;
 import java.util.UUID;
@@ -52,6 +55,8 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
     private FollowerRepository followerRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private CommentService commentService;
 
     @Autowired
     public PostServiceImpl(PostRepository repository) {
@@ -80,8 +85,10 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
             postRepository.save(postEntity);
             postDTO = mapper.map(postEntity, PostDTO.class);
             postDTO.getVoucher().setImg(shopEntity.getUserLoginData().getAvatarUrl());
+            postDTO.getVoucher().setShopId(postEntity.getVoucher().getId());
             postDTO.getShop().setAvatar(shopEntity.getUserLoginData().getAvatarUrl());
             postDTO.setImageUrl(imageEntity.getUrl());
+            postDTO.setCommentQuantity(0L);
             postDTO.getProduct().setImages(List.of(mapper.map(productEntity.getImageEntities().get(0), ImageDTO.class)));
             return postDTO;
         } catch (Exception e) {
@@ -123,6 +130,12 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
         throw new NotFoundException("Post not found");
     }
 
+    @Override
+    public PaginateDTO<?> getPosts(Long userId, GenericSpecification<PostEntity> specification, Integer page, Integer perPage) {
+        PaginateDTO<PostEntity> postEntityPaginateDTO = this.paginate(page, perPage, specification);
+        return mapPaginate(userId, postEntityPaginateDTO.getPageData(), page, perPage);
+    }
+
     private PaginateDTO<PostDTO> mapPaginate(Long userId, Page<PostEntity> pageData, Integer page, Integer perPage) {
         if (page == null || page <= 0) {
             page = 1;
@@ -130,23 +143,37 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
         if (perPage == null || perPage <= 0) {
             perPage = Common.PAGING_DEFAULT_LIMIT;
         }
+
         UserLoginDataEntity user = userRepository.findById(userId).orElseThrow(() -> new NotFoundException("User not found"));
         Pagination pagination = new Pagination(page, perPage, pageData.getTotalPages(), pageData.getTotalElements());
         List<PostDTO> postDTOs = pageData.stream()
                 .map(postEntity -> {
+
+                    GenericSpecification<CommentEntity> specification = new GenericSpecification<CommentEntity>();
+                    specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "post", "id", postEntity.getId(), JoinType.INNER));
+                    specification.add(new SearchCriteria("parent", null, SearchOperation.NULL));
+                    PaginateDTO<CommentDTO> commentDTOPaginateDTO = commentService.getPostComments(specification, 1, 1);
+
                     PostDTO postDTO = mapper.map(postEntity, PostDTO.class);
-                    postDTO.getVoucher().setImg(postEntity.getShop().getUserLoginData().getAvatarUrl());
+                    if (postDTO.getVoucher() != null) {
+                        postDTO.getVoucher().setImg(postEntity.getShop().getUserLoginData().getAvatarUrl());
+                        if (postEntity.getVoucher().getQuantity() <= postEntity.getVoucher().getSaved() || postEntity.getVoucher().getEndTime() < System.currentTimeMillis()) {
+                            postDTO.setVoucher(null);
+                        } else {
+                            postDTO.getVoucher().setSaved(postEntity.getVoucher().getUsers().contains(user) ? 1 : 0);
+                            postDTO.getVoucher().setSaved(postEntity.getVoucher().getQuantity() <= postEntity.getVoucher().getSaved() ? -1 : postDTO.getVoucher().getSaved());
+                        }
+                    }
                     postDTO.getShop().setAvatar(postEntity.getShop().getUserLoginData().getAvatarUrl());
-                    if ( postEntity.getImage()!=null ){
+                    postDTO.setCreatedTime(postEntity.getCreatedTime().getTime());
+                    if ( postEntity.getImage() != null ){
                         postDTO.setImageUrl(postEntity.getImage().getUrl());
                     }
-                    postDTO.getProduct().setImages(List.of(mapper.map(postEntity.getProduct().getImageEntities().get(0), ImageDTO.class)));
-                    postDTO.setLikes(new LikeDTO(postEntity.getId(), userId, postEntity.getLikes().size(), postEntity.getLikes().contains(user)));
-                    if (postEntity.getVoucher().getQuantity() <= postEntity.getVoucher().getSaved() || postEntity.getVoucher().getEndTime() < System.currentTimeMillis()) {
-                        postDTO.setVoucher(null);
-                    } else {
-                        postDTO.getVoucher().setSaved(postEntity.getVoucher().getUsers().contains(user) ? 1 : 0);
+                    if (postDTO.getProduct() != null) {
+                        postDTO.getProduct().setImages(List.of(mapper.map(postEntity.getProduct().getImageEntities().get(0), ImageDTO.class)));
                     }
+                    postDTO.setLikes(new LikeDTO(postEntity.getId(), userId, postEntity.getLikes().size(), postEntity.getLikes().contains(user)));
+                    postDTO.setCommentQuantity(commentDTOPaginateDTO.getPagination().getTotal());
                     return postDTO;
                 })
                 .toList();

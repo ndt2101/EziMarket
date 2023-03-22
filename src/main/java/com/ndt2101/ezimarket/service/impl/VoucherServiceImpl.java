@@ -122,6 +122,7 @@ public class VoucherServiceImpl extends BasePagination<VoucherEntity, VoucherRep
             voucherDTO.setImg(voucherEntity.getShop().getUserLoginData().getAvatarUrl());
             voucherDTO.setShopId(voucherEntity.getShop().getId());
             voucherDTO.setSaved(voucherEntity.getUsers().contains(userEntity) ? 1: 0);
+            voucherDTO.setSaved(voucherEntity.getQuantity() <= voucherEntity.getSaved() ? -1 : voucherDTO.getSaved());
             return voucherDTO;
         }
         throw new NotFoundException("Cant save voucher for user");

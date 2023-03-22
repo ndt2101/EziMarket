@@ -17,4 +17,6 @@ public class PostDTO extends BaseDTO {
     private ProductResponseDTO product;
     private VoucherDTO voucher;
     private LikeDTO likes;
+    private Long createdTime;
+    private Long commentQuantity;
 }

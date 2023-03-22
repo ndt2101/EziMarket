@@ -4,14 +4,21 @@ import com.ndt2101.ezimarket.base.BaseController;
 import com.ndt2101.ezimarket.dto.LikeDTO;
 import com.ndt2101.ezimarket.dto.PostDTO;
 import com.ndt2101.ezimarket.exception.ApplicationException;
+import com.ndt2101.ezimarket.model.PostEntity;
 import com.ndt2101.ezimarket.repository.CategoryRepository;
 import com.ndt2101.ezimarket.service.PostService;
+import com.ndt2101.ezimarket.specification.GenericSpecification;
+import com.ndt2101.ezimarket.specification.JoinCriteria;
+import com.ndt2101.ezimarket.specification.SearchOperation;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import javax.persistence.criteria.JoinType;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/post")
@@ -23,19 +30,34 @@ public class PostController extends BaseController<Object> {
     @Autowired
     private ModelMapper mapper;
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> create(@ModelAttribute(name = "postDTO") PostDTO postDTO, @ModelAttribute MultipartFile file) throws ApplicationException {
-        return this.successfulResponse(postService.create(postDTO, file));
+    @PostMapping("/")
+    public ResponseEntity<?> create(@RequestPart(name = "post") PostDTO postDTO, @RequestParam MultipartFile image) throws ApplicationException {
+        return this.successfulResponse(postService.create(postDTO, image));
     }
 
-    @GetMapping
-    public ResponseEntity<?> getList(
-            @RequestParam(name = "category", required = false) Long categoryId,
+    @GetMapping("/category/{category}")
+    public ResponseEntity<?> getViaCategoryList(
+            @PathVariable(name = "category") Long categoryId,
             @RequestParam(name = "userId", required = false) Long userId,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage
     ) {
         return resPagination(postService.getList(userId, categoryId, page, perPage));
+    }
+
+    @GetMapping("/")
+    public ResponseEntity<?> getShopPosts( // getAll thi khong truyen vao shopId
+            @RequestParam(name = "shopId", required = false) Long shopId,
+            @RequestParam(name = "userId", required = false) Long userId,
+            @RequestParam(name = "page", required = false) Integer page,
+            @RequestParam(name = "perPage", required = false) Integer perPage,
+            HttpServletRequest request
+    ) {
+        GenericSpecification<PostEntity> specification = new  GenericSpecification<PostEntity>().getBasicQuery(request);
+        if (shopId != null) {
+            specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "shop", "id", shopId, JoinType.INNER));
+        }
+        return resPagination(postService.getPosts(userId, specification, page, perPage));
     }
 
     @GetMapping("/followed/{id}")

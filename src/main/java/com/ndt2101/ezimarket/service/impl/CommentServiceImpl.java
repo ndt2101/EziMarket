@@ -2,7 +2,6 @@ package com.ndt2101.ezimarket.service.impl;
 
 import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.dto.CommentDTO;
-import com.ndt2101.ezimarket.dto.PostDTO;
 import com.ndt2101.ezimarket.dto.UserDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
@@ -15,7 +14,6 @@ import com.ndt2101.ezimarket.repository.UserRepository;
 import com.ndt2101.ezimarket.service.CommentService;
 
 import com.ndt2101.ezimarket.specification.GenericSpecification;
-import org.checkerframework.checker.units.qual.A;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -92,7 +90,7 @@ public class CommentServiceImpl extends BasePagination<CommentEntity, CommentRep
             commentDTO.setParentId(commentEntity.getParent().getId());
         }
         commentDTO.setPostId(commentEntity.getPost().getId());
-        commentDTO.setCreateTime(commentEntity.getCreatedTime());
+        commentDTO.setCreatedTime(commentEntity.getCreatedTime());
         return commentDTO;
     }
 
