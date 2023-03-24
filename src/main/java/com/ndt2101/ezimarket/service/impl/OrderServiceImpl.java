@@ -4,6 +4,7 @@ import com.ndt2101.ezimarket.base.BasePagination;
 import com.ndt2101.ezimarket.constant.Common;
 import com.ndt2101.ezimarket.dto.*;
 import com.ndt2101.ezimarket.dto.GHN.*;
+import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.model.*;
 import com.ndt2101.ezimarket.model.paypal.Payer;
@@ -17,6 +18,9 @@ import com.ndt2101.ezimarket.specification.SearchOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -237,6 +241,17 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         return orderDTO;
     }
 
+    @Override
+    public PaginateDTO<OrderDTO> getOrders(Integer page, Integer perPage, GenericSpecification<OrderEntity> specification) {
+        PaginateDTO<OrderEntity> orderEntityPaginateDTO = this.paginate(page, perPage, specification);
+        List<OrderItemEntity> orderItems = new ArrayList<>();
+        orderEntityPaginateDTO.getPageData().forEach(orderEntity ->
+                orderItems.addAll(orderEntity.getOrderItems())
+        );
+        Page<OrderDTO> pageData = new PageImpl<>(formatResponseData(orderItems), PageRequest.of(page, perPage), perPage);
+        return new PaginateDTO<>(pageData, orderEntityPaginateDTO.getPagination());
+    }
+
     private String cancelGHNOrder(String orderCode, String ghnShopId) throws ExecutionException, InterruptedException {
         List<String> order_codes = new ArrayList<>();
         order_codes.add(orderCode);
@@ -432,7 +447,9 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             OrderDTO orderDTO = mapper.map(orderEntity, OrderDTO.class);
             orderDTO.setShop(shopDTOMap.get(orderEntity.getShop().getId()));
             setUserDTO(orderDTO, orderEntity);
-            orderDTO.getShippingMethod().setOrder(null);
+            if (orderDTO.getShippingMethod() != null) {
+                orderDTO.getShippingMethod().setOrder(null);
+            }
             orderDTOs.add(orderDTO);
         });
 

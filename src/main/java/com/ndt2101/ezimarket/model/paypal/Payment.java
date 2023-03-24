@@ -18,9 +18,12 @@ import java.util.List;
 public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private String id;
+    private Long id;
+
     @Column
-    private String creatTime;
+    private String paypalPaymentId;
+    @Column
+    private String createdTime;
 
     @Column
     private String updateTime;
