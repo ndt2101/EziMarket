@@ -7,6 +7,7 @@ import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.exception.NotFoundException;
 import com.ndt2101.ezimarket.model.ProductEntity;
+import com.ndt2101.ezimarket.repository.ProductRepository;
 import com.ndt2101.ezimarket.service.ProductService;
 import com.ndt2101.ezimarket.specification.*;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,8 @@ public class ProductController extends BaseController<Object> {
 
     @Autowired
     private ProductService productService;
+    @Autowired
+    private ProductRepository productRepository;
 
     @PostMapping()
     public ResponseEntity<?> createProduct(@RequestBody ProductPayLoadDTO productPayLoad) {
@@ -68,6 +71,7 @@ public class ProductController extends BaseController<Object> {
             @RequestParam(name = "name", required = false) String name,
             @RequestParam(name = "price", required = false) String priceRange,
             @RequestParam(name = "category", required = false) Long categoryId,
+            @RequestParam(name = "saleProgram", required = false) Long saleProgram,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage,
             HttpServletRequest request) throws IOException {
@@ -82,6 +86,12 @@ public class ProductController extends BaseController<Object> {
         if (categoryId != null) {
             JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.EQUAL, "category", "id", categoryId, JoinType.LEFT);
             specification.buildJoin(joinCriteria);
+        }
+
+        if (saleProgram != null) {
+            JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.GREATER_THAN, "saleProgram", "discount", 0, JoinType.INNER);
+            specification.buildJoin(joinCriteria);
+            specification.buildSort("updatedTime", SortType.DESC);
         }
 
         if (name != null) {
@@ -99,5 +109,10 @@ public class ProductController extends BaseController<Object> {
         }
         PaginateDTO<ProductResponseDTO> productResponseDTOPaginateDTO = productService.getList(page, perPage, specification);
         return this.resPagination(productResponseDTOPaginateDTO);
+    }
+
+    @GetMapping("count/shop/{id}")
+    ResponseEntity<?> getShopProductTotal(@PathVariable("id") Long shopId) {
+        return successfulResponse(productRepository.countProductEntitiesByShop_Id(shopId));
     }
 }

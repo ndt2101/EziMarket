@@ -53,6 +53,14 @@ public class GenericSpecification <T> implements Specification<T> {
                         StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
                         SearchOperation.LIKE));
             }
+
+            if (item.getKey().contains("notnull")) {
+                specification.add(new SearchCriteria(
+                        StringUtils.substringBeforeLast(item.getKey(), "_"),
+                        StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]"),
+                        SearchOperation.NOT_NULL));
+            }
+
             if (item.getKey().contains("greater-than")) {
                 specification.add(new SearchCriteria(
 //                        StringUtils.substringBetween(item.getKey(), "[", "]"),
@@ -90,9 +98,10 @@ public class GenericSpecification <T> implements Specification<T> {
                         SearchOperation.IN));
             }
             if (item.getKey().contains("sort")) {
-                String field = StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]");
-                if (field.contains("-")) {
-                    specification.buildSort(field.substring(1), SortType.DESC);
+                String field = StringUtils.substringBeforeLast(item.getKey(), "_");
+                String type = StringUtils.substringBetween(Arrays.toString(item.getValue()), "[", "]");
+                if (type.equals("desc")) {
+                    specification.buildSort(field, SortType.DESC);
                 } else {
                     specification.buildSort(field, SortType.ASC);
                 }
@@ -219,6 +228,7 @@ public class GenericSpecification <T> implements Specification<T> {
         }
 
         query.distinct(true);
+
 
         return builder.and(predicates.toArray(new Predicate[0]));
     }
