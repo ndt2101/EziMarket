@@ -151,6 +151,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
                 newCart.setShop(shopEntity);
                 newCart.setUser(userEntity);
                 newCart.setStatus(Common.ORDER_STATUS_IN_CART);
+                newCart.setOrderItems(tillInCartOrderItem);
                 newCart = orderRepository.save(newCart);
 
                 OrderEntity finalNewCart = newCart;
@@ -181,6 +182,7 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         shippingMethod.setPrice((long) ghnOrder.getData().getTotal_fee());
 
         shippingMethod = shippingMethodRepository.save(shippingMethod);
+        shippingMethodRepository.delete(orderEntity.getShippingMethod());
         orderEntity.setShippingMethod(shippingMethod);
 
         orderEntity.setCode(ghnOrder.getData().getOrder_code());
