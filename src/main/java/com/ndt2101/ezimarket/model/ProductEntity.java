@@ -59,4 +59,31 @@ public class ProductEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CommentEntity> comments;
+
+    public ProductEntity clone(ProductEntity productEntity) {
+        ProductEntity product = new ProductEntity();
+        product.setId(productEntity.getId());
+        product.setCreatedBy(productEntity.getCreatedBy());
+        product.setCreatedTime(productEntity.getCreatedTime());
+        product.setUpdatedBy(productEntity.getUpdatedBy());
+        product.setUpdatedTime(productEntity.getUpdatedTime());
+        product.setName(productEntity.getName());
+        product.setDescription(productEntity.getDescription());
+        product.setCategory(productEntity.getCategory());
+        product.setStatus(productEntity.getStatus());
+        product.setView(productEntity.getView());
+        product.setRate(productEntity.getRate());
+        product.setSoldNumber(productEntity.getSoldNumber());
+        product.setShop(productEntity.getShop());
+        product.setWeight(productEntity.getWeight());
+        product.setWidth(productEntity.getWidth());
+        product.setHeight(productEntity.getHeight());
+        product.setLength(productEntity.getLength());
+        product.setProductTypes(productEntity.getProductTypes());
+        product.setImageEntities(productEntity.getImageEntities());
+        product.setSaleProgram(productEntity.getSaleProgram());
+        product.setPosts(productEntity.getPosts());
+        product.setComments(productEntity.getComments());
+        return product;
+    }
 }

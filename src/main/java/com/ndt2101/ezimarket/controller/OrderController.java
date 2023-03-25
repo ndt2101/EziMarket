@@ -1,6 +1,7 @@
 package com.ndt2101.ezimarket.controller;
 
 import com.ndt2101.ezimarket.base.BaseController;
+import com.ndt2101.ezimarket.dto.GHN.ShippingCalculate;
 import com.ndt2101.ezimarket.dto.OrderDTO;
 import com.ndt2101.ezimarket.dto.OrderItemDTO;
 import com.ndt2101.ezimarket.model.OrderEntity;
@@ -64,6 +65,11 @@ public class OrderController extends BaseController<Object> {
             specification.buildJoin(joinCriteria);
         }
         return this.resPagination(orderService.getOrders(page, perPage, specification));
+    }
+
+    @PostMapping("/calculate_fee/{id}")
+    public ResponseEntity<?> calculateOrderFee(@PathVariable("id") Long shopId, @RequestBody ShippingCalculate shippingCalculate) throws ExecutionException, InterruptedException {
+        return this.successfulResponse(orderService.calculateOrderFee(shippingCalculate, shopId));
     }
 
 }

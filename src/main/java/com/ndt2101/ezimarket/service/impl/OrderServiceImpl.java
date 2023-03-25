@@ -288,6 +288,29 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         return null;
     }
 
+    @Override
+    public ShippingCalculateResponseData calculateOrderFee(ShippingCalculate shippingCalculate, Long shopId) throws ExecutionException, InterruptedException {
+        Integer ghnStoreId = shopRepository.findById(shopId).get().getGHNStoreId();
+        ExecutorService executorService = Executors.newFixedThreadPool(1);
+        Callable<ShippingCalculateResponse> calculateFee = new Callable<ShippingCalculateResponse>() {
+            @Override
+            public ShippingCalculateResponse call() throws Exception {
+                RestTemplate restTemplate = new RestTemplate();
+                // Tạo header
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Token", Common.GHN_TOKEN);
+                headers.set("ShopId", String.valueOf(ghnStoreId));
+                headers.set("Content-Type", Common.GHN_CONTENT_TYPE);
+                // Tạo entity từ đối tượng request và header
+                HttpEntity<ShippingCalculate> entity = new HttpEntity<>(shippingCalculate, headers);
+                ResponseEntity<ShippingCalculateResponse> savedStore = restTemplate.exchange(Common.CALCULATE_FEE_IN_GHN_API,  HttpMethod.POST, entity, ShippingCalculateResponse.class);
+                return savedStore.getBody();
+            }
+        };
+        Future<ShippingCalculateResponse> future = executorService.submit(calculateFee);
+        return future.get().getData();
+    }
+
 
     private OrderData createGHNOrder(OrderEntity orderEntity) throws ExecutionException, InterruptedException{
         ExecutorService executorService = Executors.newFixedThreadPool(1);
@@ -397,24 +420,22 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
             );
         });
 
-        Map<Long, ProductEntity> productEntityMap = new HashMap<>();
+        List<ProductEntity> productEntityMap = new ArrayList<>();
         productTypeEntityMap.values().forEach(productTypeEntity -> {
-            ProductEntity productEntity = productEntityMap.get(productTypeEntity.getProduct().getId());
-            if (productEntity == null) {
-                productEntity = productTypeEntity.getProduct();
-                productEntity.setProductTypes(new ArrayList<>());
+            ProductEntity productEntity = productTypeEntity.getProduct();
+            if (productEntityMap.contains(productEntity)) {
+                productEntity = productEntity.clone(productEntity);
             }
+
+            productEntity.setProductTypes(new ArrayList<>());
 
             productEntity.getProductTypes().add(productTypeEntity);
 
-            productEntityMap.put(
-                    productTypeEntity.getProduct().getId(),
-                    productEntity
-            );
+            productEntityMap.add(productEntity);
         });
 
         Map<Long, ShopEntity> shopEntityMap = new HashMap<>();
-        productEntityMap.values().forEach(productEntity -> {
+        productEntityMap.forEach(productEntity -> {
             ShopEntity shopEntity = shopEntityMap.get(productEntity.getShop().getId());
             if (shopEntity == null) {
                 shopEntity = productEntity.getShop();

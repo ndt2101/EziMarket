@@ -1,5 +1,8 @@
 package com.ndt2101.ezimarket.service;
 
+import com.ndt2101.ezimarket.dto.GHN.ShippingCalculate;
+import com.ndt2101.ezimarket.dto.GHN.ShippingCalculateResponse;
+import com.ndt2101.ezimarket.dto.GHN.ShippingCalculateResponseData;
 import com.ndt2101.ezimarket.dto.OrderDTO;
 import com.ndt2101.ezimarket.dto.OrderItemDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
@@ -17,4 +20,6 @@ public interface OrderService {
     OrderDTO updateOrderStatus(Long orderId, String orderStatus) throws ExecutionException, InterruptedException;
     PaginateDTO<OrderDTO> getOrders(Integer page, Integer perPage, GenericSpecification<OrderEntity> specification);
     OrderDTO paypalCheckout(OrderDTO orderDTO);
+
+    ShippingCalculateResponseData calculateOrderFee(ShippingCalculate shippingCalculate, Long shopId) throws ExecutionException, InterruptedException;
 }
