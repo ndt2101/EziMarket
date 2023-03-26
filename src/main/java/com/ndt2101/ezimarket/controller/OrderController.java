@@ -50,6 +50,7 @@ public class OrderController extends BaseController<Object> {
     public ResponseEntity<?> getOrders(
             @RequestParam(name = "shopId", required = false) Long shopId,
             @RequestParam(name = "userId", required = false) Long userId,
+            @RequestParam(name = "type", required = false) String type,
             @RequestParam(name = "page", required = false) Integer page,
             @RequestParam(name = "perPage", required = false) Integer perPage,
             HttpServletRequest request
@@ -64,7 +65,7 @@ public class OrderController extends BaseController<Object> {
             JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.EQUAL, "user", "id", userId, JoinType.INNER);
             specification.buildJoin(joinCriteria);
         }
-        return this.resPagination(orderService.getOrders(page, perPage, specification));
+        return this.resPagination(orderService.getOrders(page, perPage, specification, type));
     }
 
     @PostMapping("/calculate_fee/{id}")

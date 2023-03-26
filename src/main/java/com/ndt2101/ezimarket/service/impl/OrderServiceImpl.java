@@ -25,17 +25,10 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 import org.springframework.web.client.RestTemplate;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import javax.persistence.criteria.JoinType;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -182,7 +175,6 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         shippingMethod.setPrice((long) ghnOrder.getData().getTotal_fee());
 
         shippingMethod = shippingMethodRepository.save(shippingMethod);
-        shippingMethodRepository.delete(orderEntity.getShippingMethod());
         orderEntity.setShippingMethod(shippingMethod);
 
         orderEntity.setCode(ghnOrder.getData().getOrder_code());
@@ -244,13 +236,22 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     }
 
     @Override
-    public PaginateDTO<OrderDTO> getOrders(Integer page, Integer perPage, GenericSpecification<OrderEntity> specification) {
+    public PaginateDTO<OrderDTO> getOrders(Integer page, Integer perPage, GenericSpecification<OrderEntity> specification, String type) {
         PaginateDTO<OrderEntity> orderEntityPaginateDTO = this.paginate(page, perPage, specification);
-        List<OrderItemEntity> orderItems = new ArrayList<>();
-        orderEntityPaginateDTO.getPageData().forEach(orderEntity ->
-                orderItems.addAll(orderEntity.getOrderItems())
-        );
-        Page<OrderDTO> pageData = new PageImpl<>(formatResponseData(orderItems), PageRequest.of(page, perPage), perPage);
+        Page<OrderDTO> pageData = null;
+        if (type.equals("user")) {
+            List<OrderItemEntity> orderItems = new ArrayList<>();
+            orderEntityPaginateDTO.getPageData().forEach(orderEntity ->
+                    orderItems.addAll(orderEntity.getOrderItems())
+            );
+            pageData = new PageImpl<>(formatResponseData(orderItems), PageRequest.of(page, perPage), perPage);
+        } else {
+            List<OrderDTO> orderDTOS = new ArrayList<>();
+            orderEntityPaginateDTO.getPageData().forEach(orderEntity ->
+                    orderDTOS.add(formatResponseData(orderEntity.getOrderItems().stream().toList()).get(0))
+            );
+            pageData= new PageImpl<>(orderDTOS, PageRequest.of(page, perPage), perPage);
+        }
         return new PaginateDTO<>(pageData, orderEntityPaginateDTO.getPagination());
     }
 
