@@ -6,7 +6,6 @@ import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.model.ProductEntity;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
-import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.io.IOException;
 import java.util.List;
