@@ -60,6 +60,9 @@ public class ProductEntity extends BaseEntity {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ReviewEntity> reviews;
 
+    @OneToOne(mappedBy = "product", cascade = CascadeType.REMOVE)
+    private ProductReportEntity reportEntity;
+
     public ProductEntity clone(ProductEntity productEntity) {
         ProductEntity product = new ProductEntity();
         product.setId(productEntity.getId());
@@ -84,6 +87,7 @@ public class ProductEntity extends BaseEntity {
         product.setSaleProgram(productEntity.getSaleProgram());
         product.setPosts(productEntity.getPosts());
         product.setReviews(productEntity.getReviews());
+        product.setReportEntity(productEntity.getReportEntity());
         return product;
     }
 }

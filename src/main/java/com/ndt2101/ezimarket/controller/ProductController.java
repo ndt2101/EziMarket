@@ -115,4 +115,18 @@ public class ProductController extends BaseController<Object> {
     ResponseEntity<?> getShopProductTotal(@PathVariable("id") Long shopId) {
         return successfulResponse(productRepository.countProductEntitiesByShop_Id(shopId));
     }
+
+    @PostMapping("report/{id}")
+    ResponseEntity<?> report(@PathVariable("id") Long productId) {
+        return successfulResponse(productService.report(productId));
+    }
+    @GetMapping("report")
+    ResponseEntity<?> getAllReportedProduct() {
+        return successfulResponse(productService.getReportedProducts());
+    }
+
+    @PutMapping("report/{id}/{status}")
+    ResponseEntity<?> handleReport(@PathVariable("id") Long reportId, @PathVariable("status") String status) {
+        return successfulResponse(productService.handleReport(reportId, status));
+    }
 }

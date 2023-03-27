@@ -148,7 +148,6 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
         Pagination pagination = new Pagination(page, perPage, pageData.getTotalPages(), pageData.getTotalElements());
         List<PostDTO> postDTOs = pageData.stream()
                 .map(postEntity -> {
-
                     GenericSpecification<CommentEntity> specification = new GenericSpecification<CommentEntity>();
                     specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "post", "id", postEntity.getId(), JoinType.INNER));
                     specification.add(new SearchCriteria("parent", null, SearchOperation.NULL));

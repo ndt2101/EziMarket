@@ -1,23 +1,13 @@
 package com.ndt2101.ezimarket.service.impl;
 
-import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.query_dsl.FuzzyQuery;
-import co.elastic.clients.elasticsearch.core.search.Hit;
-import co.elastic.clients.json.jackson.JacksonJsonpMapper;
-import co.elastic.clients.transport.ElasticsearchTransport;
-import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.auth.Credentials;
-import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.storage.*;
 import com.ndt2101.ezimarket.base.BaseDTO;
 import com.ndt2101.ezimarket.base.BasePagination;
+import com.ndt2101.ezimarket.constant.Common;
 import com.ndt2101.ezimarket.dto.ImageDTO;
-import com.ndt2101.ezimarket.dto.SaleProgramDTO;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
-import com.ndt2101.ezimarket.dto.product.ProductTypeDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.elasticsearch.elasticsearchrepository.ELSProductRepository;
 import com.ndt2101.ezimarket.elasticsearch.model.Product;
@@ -49,17 +39,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
-import java.io.*;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -75,6 +60,10 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
     private ShopRepository shopRepository;
     @Autowired
     private ImageRepository imageRepository;
+    @Autowired
+    private PostRepository postRepository;
+    @Autowired
+    private ProductReportRepository productReportRepository;
     @PersistenceContext
     private EntityManager entityManager;
     @Autowired
@@ -176,6 +165,40 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
         return new PaginateDTO<>(pageData, productEntityPaginateDTO.getPagination());
     }
 
+    @Override
+    public String report(Long productId) {
+        ProductReportEntity productReportEntity = productReportRepository.save(new ProductReportEntity(productRepository.findById(productId).orElseThrow(Common.productNotFound)));
+        if (productReportEntity.getId() != null) {
+            return "Báo cáo sản phẩm thành công, admin sẽ xem và kiểm duyệt. Cảm ơn bạn đã góp phần xây dựng một Ezi Market văn minh!";
+        } else {
+            return null;
+        }
+    }
+
+    @Override
+    public List<ProductResponseDTO> getReportedProducts() {
+        return productReportRepository.findAll().stream()
+                .map(productReportEntity -> mapAndHandleSaleProgram(productReportEntity.getProduct()))
+                .toList();
+    }
+
+    @Override
+    public String handleReport(Long reportId, String status) {
+        if (status.equals("approve")) {
+            ProductReportEntity reportEntity = productReportRepository.findById(reportId).orElseThrow(Common.reportNotFound);
+            ProductEntity productEntity = productRepository.findById(reportEntity.getProduct().getId()).orElseThrow(Common.productNotFound);
+            productEntity.setStatus("banned");
+            productEntity.getPosts().forEach(postEntity -> {
+                postEntity.setProduct(null);
+            });
+            postRepository.saveAll(productEntity.getPosts());
+            productEntity.setPosts(null);
+            productRepository.save(productEntity);
+        }
+        productReportRepository.deleteById(reportId);
+        return "Xử lý thành công";
+    }
+
     private void deleteImage(ProductPayLoadDTO productPayLoadDTO) {
         List<ImageEntity> oldImages = imageRepository.findByProduct(
                 productRepository.findById(productPayLoadDTO.getId())
@@ -189,7 +212,7 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
                 if (Objects.equals(imageEntity.getId(), imageId)) {
                     neededSaveIds.remove(imageId);
                     return true;
-                } else  {
+                } else {
                     return false;
                 }
             });

@@ -5,6 +5,7 @@ import com.ndt2101.ezimarket.dto.product.ProductPayLoadDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.elasticsearch.dto.ProductDTO;
 import com.ndt2101.ezimarket.model.ProductEntity;
+import com.ndt2101.ezimarket.model.ProductReportEntity;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
 
 import java.io.IOException;
@@ -21,4 +22,10 @@ public interface ProductService {
     ProductResponseDTO getProductDetail(Long productId);
 
     PaginateDTO<ProductResponseDTO> getList(Integer page, Integer perPage, GenericSpecification<ProductEntity> specification);
+
+    String report(Long productId);
+
+    List<ProductResponseDTO> getReportedProducts();
+
+    String handleReport(Long productId, String status);
 }

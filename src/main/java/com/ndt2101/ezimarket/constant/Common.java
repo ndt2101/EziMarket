@@ -24,6 +24,9 @@ public class Common {
 
     public static final String GHN_TOKEN = "0a64e1dc-a1e6-11ed-b62e-2a5743127145";
     public static final String GHN_CONTENT_TYPE = "application/json";
+    public static final Supplier<NotFoundException> productNotFound = () -> new NotFoundException("Product not found");
+
+    public static final Supplier<NotFoundException> reportNotFound = () -> new NotFoundException("Report not found");
 
     public static final Supplier<NotFoundException> productTypeNotFound = () -> new NotFoundException("Product Type not found");
     public static final Supplier<NotFoundException> userNotFound = () -> new NotFoundException("User not found");

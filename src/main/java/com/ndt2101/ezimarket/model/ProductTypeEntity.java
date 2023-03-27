@@ -33,6 +33,6 @@ public class ProductTypeEntity extends BaseEntity {
     @JoinColumn(name = "product_id")
     private ProductEntity product;
 
-    @OneToMany(mappedBy = "productType", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "productType", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
     private Set<OrderItemEntity> orderItems;
 }
