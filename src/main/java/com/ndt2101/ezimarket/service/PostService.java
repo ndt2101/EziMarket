@@ -8,11 +8,16 @@ import com.ndt2101.ezimarket.model.PostEntity;
 import com.ndt2101.ezimarket.specification.GenericSpecification;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface PostService {
     PostDTO create(PostDTO postDTO, MultipartFile multipartFile) throws ApplicationException;
     PaginateDTO<PostDTO> getList(Long userId, Long categoryId, Integer page, Integer perPage);
     LikeDTO like(LikeDTO likeDTO);
     PaginateDTO<PostDTO> getFollowingPost(Long id, Integer page, Integer perPage);
-
     PaginateDTO<?> getPosts(Long userId, GenericSpecification<PostEntity> specification, Integer page, Integer perPage);
+    String report(Long postId);
+    List<PostDTO> getReportedPosts();
+
+    String handleReport(Long reportId, String status);
 }

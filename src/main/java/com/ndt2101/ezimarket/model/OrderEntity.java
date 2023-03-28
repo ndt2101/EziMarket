@@ -44,7 +44,7 @@ public class OrderEntity extends BaseEntity {
     @OneToOne(mappedBy = "order")
     private Payment payment;
 
-    @OneToOne
+    @OneToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "shipping_method_id")
     private ShippingMethod shippingMethod;
 

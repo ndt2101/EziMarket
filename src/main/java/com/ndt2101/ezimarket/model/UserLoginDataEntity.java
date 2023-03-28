@@ -46,7 +46,7 @@ public class UserLoginDataEntity extends UserAccountEntity {
     @JoinColumn(name = "emailValidationStatusId")
     private EmailValidationStatusEntity emailValidationStatus;
 
-    @OneToOne(mappedBy = "userLoginData")
+    @OneToOne(mappedBy = "userLoginData", cascade = CascadeType.REMOVE)
     private ShopEntity shop;
 
     @OneToMany(mappedBy = "to", cascade = CascadeType.ALL, orphanRemoval = true)

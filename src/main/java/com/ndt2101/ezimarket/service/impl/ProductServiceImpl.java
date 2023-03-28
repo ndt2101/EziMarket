@@ -167,11 +167,15 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
 
     @Override
     public String report(Long productId) {
-        ProductReportEntity productReportEntity = productReportRepository.save(new ProductReportEntity(productRepository.findById(productId).orElseThrow(Common.productNotFound)));
-        if (productReportEntity.getId() != null) {
-            return "Báo cáo sản phẩm thành công, admin sẽ xem và kiểm duyệt. Cảm ơn bạn đã góp phần xây dựng một Ezi Market văn minh!";
+        if (!productReportRepository.existsByProduct_Id(productId)) {
+            ProductReportEntity productReportEntity = productReportRepository.save(new ProductReportEntity(productRepository.findById(productId).orElseThrow(Common.productNotFound)));
+            if (productReportEntity.getId() != null) {
+                return "Báo cáo sản phẩm thành công, admin sẽ xem và kiểm duyệt. Cảm ơn bạn đã góp phần xây dựng một Ezi Market văn minh!";
+            } else {
+                return null;
+            }
         } else {
-            return null;
+            return "Sản phẩm đang trong quá trình kiểm duyệt";
         }
     }
 
@@ -183,10 +187,9 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
     }
 
     @Override
-    public String handleReport(Long reportId, String status) {
+    public String handleReport(Long productId, String status) {
+        ProductEntity productEntity = productRepository.findById(productId).orElseThrow(Common.productNotFound);
         if (status.equals("approve")) {
-            ProductReportEntity reportEntity = productReportRepository.findById(reportId).orElseThrow(Common.reportNotFound);
-            ProductEntity productEntity = productRepository.findById(reportEntity.getProduct().getId()).orElseThrow(Common.productNotFound);
             productEntity.setStatus("banned");
             productEntity.getPosts().forEach(postEntity -> {
                 postEntity.setProduct(null);
@@ -195,7 +198,7 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
             productEntity.setPosts(null);
             productRepository.save(productEntity);
         }
-        productReportRepository.deleteById(reportId);
+        productReportRepository.deleteById(productEntity.getReportEntity().getId());
         return "Xử lý thành công";
     }
 

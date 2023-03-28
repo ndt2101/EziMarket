@@ -57,6 +57,8 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
     private UserRepository userRepository;
     @Autowired
     private CommentService commentService;
+    @Autowired
+    private PostReportRepository postReportRepository;
 
     @Autowired
     public PostServiceImpl(PostRepository repository) {
@@ -69,7 +71,7 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
         ProductEntity productEntity = productRepository.findById(postDTO.getProduct().getId()).orElseThrow(() -> new NotFoundException("Product not found"));
         VoucherEntity voucherEntity = voucherRepository.findById(postDTO.getVoucher().getId()).orElseThrow(() -> new NotFoundException("Voucher not found"));
 
-        PostEntity postEntity = new PostEntity(shopEntity, postDTO.getPostContentText(), null, productEntity, voucherEntity, null, null);
+        PostEntity postEntity = new PostEntity(shopEntity, postDTO.getPostContentText(), null, productEntity, voucherEntity, null, null, null);
         postEntity = postRepository.saveAndFlush(postEntity);
 
         try {
@@ -134,6 +136,59 @@ public class PostServiceImpl extends BasePagination<PostEntity, PostRepository> 
     public PaginateDTO<?> getPosts(Long userId, GenericSpecification<PostEntity> specification, Integer page, Integer perPage) {
         PaginateDTO<PostEntity> postEntityPaginateDTO = this.paginate(page, perPage, specification);
         return mapPaginate(userId, postEntityPaginateDTO.getPageData(), page, perPage);
+    }
+
+    @Override
+    public String report(Long postId) {
+        if (!postReportRepository.existsByPost_Id(postId)) {
+            PostReportEntity postReportEntity = postReportRepository.save(new PostReportEntity(postRepository.findById(postId).orElseThrow(Common.postNotFound)));
+            if (postReportEntity.getId() != null) {
+                return "Báo cáo bài đăng thành công, admin sẽ xem và kiểm duyệt. Cảm ơn bạn đã góp phần xây dựng một Ezi Market văn minh!";
+            } else {
+                return null;
+            }
+        } else {
+            return "Bài đăng đang trong quá trình kiểm duyệt";
+        }
+    }
+
+    @Override
+    public List<PostDTO> getReportedPosts() {
+        return postReportRepository.findAll().stream()
+                .map(postReportEntity -> {
+                    PostEntity postEntity = postReportEntity.getPost();
+                    GenericSpecification<CommentEntity> specification = new GenericSpecification<CommentEntity>();
+                    specification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "post", "id", postEntity.getId(), JoinType.INNER));
+                    specification.add(new SearchCriteria("parent", null, SearchOperation.NULL));
+                    PaginateDTO<CommentDTO> commentDTOPaginateDTO = commentService.getPostComments(specification, 1, 1);
+
+                    PostDTO postDTO = mapper.map(postEntity, PostDTO.class);
+                    if (postDTO.getVoucher() != null) {
+                        postDTO.getVoucher().setImg(postEntity.getShop().getUserLoginData().getAvatarUrl());
+                    }
+                    postDTO.getShop().setAvatar(postEntity.getShop().getUserLoginData().getAvatarUrl());
+                    postDTO.setCreatedTime(postEntity.getCreatedTime().getTime());
+                    if ( postEntity.getImage() != null ){
+                        postDTO.setImageUrl(postEntity.getImage().getUrl());
+                    }
+                    if (postDTO.getProduct() != null) {
+                        postDTO.getProduct().setImages(List.of(mapper.map(postEntity.getProduct().getImageEntities().get(0), ImageDTO.class)));
+                    }
+                    postDTO.setLikes(new LikeDTO(postEntity.getId(), null, postEntity.getLikes().size(), false));
+                    postDTO.setCommentQuantity(commentDTOPaginateDTO.getPagination().getTotal());
+                    return postDTO;
+                })
+                .toList();
+    }
+
+    @Override
+    public String handleReport(Long postId, String status) {
+        if (status.equals("approve")) {
+            postRepository.deleteById(postId);
+        } else  {
+            postReportRepository.deleteById(postRepository.findById(postId).orElseThrow(Common.postNotFound).getPostReport().getId());
+        }
+        return "Xử lý thành công";
     }
 
     private PaginateDTO<PostDTO> mapPaginate(Long userId, Page<PostEntity> pageData, Integer page, Integer perPage) {

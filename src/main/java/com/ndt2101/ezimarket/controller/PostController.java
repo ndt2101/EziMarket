@@ -73,4 +73,19 @@ public class PostController extends BaseController<Object> {
     public ResponseEntity<?> like(@RequestBody LikeDTO likeDTO) {
         return this.successfulResponse(postService.like(likeDTO));
     }
+
+    @PostMapping("report/{id}")
+    ResponseEntity<?> report(@PathVariable("id") Long postId) {
+        return successfulResponse(postService.report(postId));
+    }
+
+    @GetMapping("report")
+    ResponseEntity<?> getAllReportedPost() {
+        return successfulResponse(postService.getReportedPosts());
+    }
+
+    @PutMapping("report/{id}/{status}")
+    ResponseEntity<?> handleReport(@PathVariable("id") Long postId, @PathVariable("status") String status) {
+        return successfulResponse(postService.handleReport(postId, status));
+    }
 }

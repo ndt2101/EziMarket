@@ -28,6 +28,8 @@ public class Common {
 
     public static final Supplier<NotFoundException> reportNotFound = () -> new NotFoundException("Report not found");
 
+    public static final Supplier<NotFoundException> postNotFound = () -> new NotFoundException("Post not found");
+
     public static final Supplier<NotFoundException> productTypeNotFound = () -> new NotFoundException("Product Type not found");
     public static final Supplier<NotFoundException> userNotFound = () -> new NotFoundException("User not found");
     public static final Supplier<NotFoundException> orderNotFound = () -> new NotFoundException("Order not found");

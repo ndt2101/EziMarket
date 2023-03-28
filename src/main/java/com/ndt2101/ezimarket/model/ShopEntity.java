@@ -29,7 +29,7 @@ public class ShopEntity extends BaseEntity {
     @Column(name = "ghn_store_id")
     private Integer GHNStoreId;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne()
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private UserLoginDataEntity userLoginData;
 
@@ -45,7 +45,7 @@ public class ShopEntity extends BaseEntity {
     @OneToMany(mappedBy = "from", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FollowerEntity> followings;
 
-    @OneToMany(mappedBy = "shop", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "shop", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<OrderEntity> orders;
 
 }

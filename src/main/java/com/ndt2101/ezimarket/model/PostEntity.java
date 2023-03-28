@@ -20,14 +20,18 @@ public class PostEntity extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "shop_id")
     private ShopEntity shop;
+
     @Column
     private String postContentText;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "image_id")
     private ImageEntity image;
+
     @ManyToOne
     @JoinColumn(name = "product_id")
     private ProductEntity product;
+
     @ManyToOne
     @JoinColumn(name = "voucher_id")
     private VoucherEntity voucher;
@@ -38,4 +42,7 @@ public class PostEntity extends BaseEntity {
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CommentEntity> comments;
+
+    @OneToOne(mappedBy = "post", cascade = CascadeType.REMOVE)
+    private PostReportEntity postReport;
 }
