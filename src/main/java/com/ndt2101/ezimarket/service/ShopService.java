@@ -14,4 +14,6 @@ public interface ShopService {
     String register(ShopDTO shopDTO, String loginName) throws ExecutionException, InterruptedException, ApplicationException;
     ShopDTO getShop(Specification<ShopEntity> specification);
     PaginateDTO<ShopDTO> getShops(Integer page, Integer parPage, GenericSpecification<ShopEntity> specification);
+
+    String getCurrentDevice(Long shopId);
 }

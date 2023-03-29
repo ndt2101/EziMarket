@@ -109,4 +109,9 @@ public class ShopServiceImpl extends BasePagination<ShopEntity, ShopRepository> 
         Page<ShopDTO> pageData = new PageImpl<>(shopDTOs, PageRequest.of(page, perPage), perPage);
         return new PaginateDTO<>(pageData, shopEntityPaginateDTO.getPagination());
     }
+
+    @Override
+    public String getCurrentDevice(Long shopId) {
+        return shopRepository.findById(shopId).orElseThrow(Common.shopNotFound).getUserLoginData().getCurrentDevice();
+    }
 }

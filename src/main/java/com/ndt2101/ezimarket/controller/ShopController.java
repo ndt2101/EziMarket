@@ -61,4 +61,9 @@ public class ShopController extends BaseController<Object> {
         specification = specification.getBasicQuery(request);
         return resPagination(shopService.getShops(page, perPage, specification));
     }
+
+    @GetMapping("/current_device/")
+    public ResponseEntity<?> getUserDevice(@RequestParam(name = "shopId") Long shopId) {
+        return successfulResponse(shopService.getCurrentDevice(shopId));
+    }
 }
