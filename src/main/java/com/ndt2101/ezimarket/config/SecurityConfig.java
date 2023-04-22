@@ -69,7 +69,7 @@ public class SecurityConfig {
                     .configurationSource(request -> {
                         CorsConfiguration configuration = new CorsConfiguration();
                         configuration.applyPermitDefaultValues();
-                        configuration.setAllowedMethods(Arrays.asList("DELETE", "PUT", "PATCH"));
+                        configuration.setAllowedMethods(Arrays.asList("DELETE", "PUT", "GET", "POST"));
                         return configuration;
                     })
                 .and()

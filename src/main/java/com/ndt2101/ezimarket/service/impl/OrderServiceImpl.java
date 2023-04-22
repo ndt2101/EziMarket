@@ -7,7 +7,7 @@ import com.ndt2101.ezimarket.dto.GHN.*;
 import com.ndt2101.ezimarket.dto.pagination.PaginateDTO;
 import com.ndt2101.ezimarket.dto.product.ProductResponseDTO;
 import com.ndt2101.ezimarket.model.*;
-import com.ndt2101.ezimarket.model.paypal.Payer;
+//import com.ndt2101.ezimarket.model.paypal.Payer;
 import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import com.ndt2101.ezimarket.repository.*;
 import com.ndt2101.ezimarket.service.OrderService;
@@ -61,14 +61,14 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private ShippingMethodRepository shippingMethodRepository;
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
-    @Autowired
-    private PayerRepository payerRepository;
-    @Autowired
-    private TransactionRepository transactionRepository;
-    @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
-    private RefundRepository refundRepository;
+//    @Autowired
+//    private PayerRepository payerRepository;
+//    @Autowired
+//    private TransactionRepository transactionRepository;
+//    @Autowired
+//    private PaymentRepository paymentRepository;
+//    @Autowired
+//    private RefundRepository refundRepository;
 
     @Autowired
     public OrderServiceImpl(OrderRepository repository) {
@@ -291,12 +291,12 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
      * sau do save transaction
      * khi tra lai thi save refund, save refund thi cac truong da xo du het, chi can lay ra de set
      */
-    @Override
-    public OrderDTO paypalCheckout(OrderDTO orderDTO) {
-        OrderEntity orderEntity = orderRepository.findById(orderDTO.getId()).orElseThrow(Common.orderNotFound);
-        Payer formPayer = payerRepository.findByUserLoginDataEntity_Id(orderDTO.getUserDTO().getId()).orElse(orderDTO.getPayment().getFrom());
-        return null;
-    }
+//    @Override
+//    public OrderDTO paypalCheckout(OrderDTO orderDTO) {
+//        OrderEntity orderEntity = orderRepository.findById(orderDTO.getId()).orElseThrow(Common.orderNotFound);
+//        Payer formPayer = payerRepository.findByUserLoginDataEntity_Id(orderDTO.getUserDTO().getId()).orElse(orderDTO.getPayment().getFrom());
+//        return null;
+//    }
 
     @Override
     public ShippingCalculateResponseData calculateOrderFee(ShippingCalculate shippingCalculate, Long shopId) throws ExecutionException, InterruptedException {
@@ -321,6 +321,25 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         return future.get().getData();
     }
 
+    @Override
+    public DashboardDTO getDashboardParameter(Long shopId) {
+        List<Long> orderCount = new ArrayList<>();
+        List<Map<String, Long>> orderViaMonth;
+        List<Map<String, Long>>  incomeViaMonth;
+
+        List<String> statuses = List.of(Common.ORDER_STATUS_CONFIRMING, Common.ORDER_STATUS_RECEIVED, Common.ORDER_STATUS_PICKING, Common.ORDER_STATUS_DELIVERING);
+        statuses.forEach(status -> orderCount.add(countViaStatus(status, shopId)));
+        orderViaMonth = orderRepository.countOrderViaMonth(shopId);
+        incomeViaMonth = orderRepository.incomeViaMonth(shopId);
+        return new DashboardDTO(orderCount, orderViaMonth, incomeViaMonth);
+    }
+
+    private long countViaStatus(String status, Long shopId) {
+        GenericSpecification<OrderEntity> orderCountSpecification = new GenericSpecification<OrderEntity>();
+        orderCountSpecification.add(new SearchCriteria("status", status, SearchOperation.EQUAL));
+        orderCountSpecification.buildJoin(new JoinCriteria(SearchOperation.EQUAL, "shop", "id", shopId, JoinType.INNER));
+        return orderRepository.count(orderCountSpecification);
+    }
 
     private OrderData createGHNOrder(OrderEntity orderEntity) throws ExecutionException, InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(1);

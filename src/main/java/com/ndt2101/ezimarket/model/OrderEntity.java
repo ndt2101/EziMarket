@@ -1,7 +1,7 @@
 package com.ndt2101.ezimarket.model;
 
 import com.ndt2101.ezimarket.base.BaseEntity;
-import com.ndt2101.ezimarket.model.paypal.Payment;
+//import com.ndt2101.ezimarket.model.paypal.Payment;
 import com.ndt2101.ezimarket.model.paypal.PaymentMethod;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -41,8 +41,8 @@ public class OrderEntity extends BaseEntity {
     @Column
     private String noteToShop;
 
-    @OneToOne(mappedBy = "order")
-    private Payment payment;
+//    @OneToOne(mappedBy = "order")
+//    private Payment payment;
 
     @OneToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "shipping_method_id")
@@ -64,7 +64,7 @@ public class OrderEntity extends BaseEntity {
         clone.setCode(orderEntity.code);
         clone.setStatus(orderEntity.status);
         clone.setPaymentMethod(orderEntity.paymentMethod);
-        clone.setPayment(orderEntity.payment);
+//        clone.setPayment(orderEntity.payment);
         clone.setShippingMethod(orderEntity.shippingMethod);
         clone.setShipTo(orderEntity.shipTo);
         clone.setNoteToShop(orderEntity.noteToShop);

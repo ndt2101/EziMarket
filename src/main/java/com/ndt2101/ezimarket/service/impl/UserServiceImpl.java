@@ -71,6 +71,7 @@ public class UserServiceImpl implements UserService {
         }
         addressEntity = addressRepository.save(addressEntity);
         userLoginData.setAddress(addressEntity);
+        userLoginData.setPhone(addressDTO.getPhone());
         userRepository.save(userLoginData);
         return "Save address successfully";
     }

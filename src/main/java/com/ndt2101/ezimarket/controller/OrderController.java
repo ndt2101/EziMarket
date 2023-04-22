@@ -73,4 +73,9 @@ public class OrderController extends BaseController<Object> {
         return this.successfulResponse(orderService.calculateOrderFee(shippingCalculate, shopId));
     }
 
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> getDashboardParameter(@RequestParam("id") Long shopId) {
+        return this.successfulResponse(orderService.getDashboardParameter(shopId));
+    }
+
 }

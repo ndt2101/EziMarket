@@ -1,5 +1,6 @@
 package com.ndt2101.ezimarket.service;
 
+import com.ndt2101.ezimarket.dto.DashboardDTO;
 import com.ndt2101.ezimarket.dto.GHN.ShippingCalculate;
 import com.ndt2101.ezimarket.dto.GHN.ShippingCalculateResponseData;
 import com.ndt2101.ezimarket.dto.OrderDTO;
@@ -18,7 +19,7 @@ public interface OrderService {
     String confirmOrder(Long orderId) throws ExecutionException, InterruptedException, ParseException, CloneNotSupportedException;
     OrderDTO updateOrderStatus(Long orderId, String orderStatus) throws ExecutionException, InterruptedException;
     PaginateDTO<OrderDTO> getOrders(Integer page, Integer perPage, GenericSpecification<OrderEntity> specification, String type);
-    OrderDTO paypalCheckout(OrderDTO orderDTO);
-
+//    OrderDTO paypalCheckout(OrderDTO orderDTO);
     ShippingCalculateResponseData calculateOrderFee(ShippingCalculate shippingCalculate, Long shopId) throws ExecutionException, InterruptedException;
+    DashboardDTO getDashboardParameter(Long shopId);
 }
