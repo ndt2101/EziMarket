@@ -89,7 +89,7 @@ public class ProductController extends BaseController<Object> {
         }
 
         if (saleProgram != null) {
-            JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.GREATER_THAN, "saleProgram", "discount", 0, JoinType.INNER);
+            JoinCriteria joinCriteria = new JoinCriteria(SearchOperation.GREATER_THAN, "saleProgram", "discount", saleProgram.floatValue()/100, JoinType.INNER);
             specification.buildJoin(joinCriteria);
             specification.buildSort("updatedTime", SortType.DESC);
         }
@@ -128,5 +128,10 @@ public class ProductController extends BaseController<Object> {
     @PutMapping("report/{id}/{status}")
     ResponseEntity<?> handleReport(@PathVariable("id") Long reportId, @PathVariable("status") String status) {
         return successfulResponse(productService.handleReport(reportId, status));
+    }
+
+    @PutMapping("view/{id}")
+    ResponseEntity<?> updateView(@PathVariable("id") Long productId) {
+        return successfulResponse(productService.updateView(productId));
     }
 }

@@ -61,6 +61,8 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
     private ShippingMethodRepository shippingMethodRepository;
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
+    @Autowired
+    private ProductRepository productRepository;
 //    @Autowired
 //    private PayerRepository payerRepository;
 //    @Autowired
@@ -230,6 +232,10 @@ public class OrderServiceImpl extends BasePagination<OrderEntity, OrderRepositor
         }
         if (orderStatus.equals(Common.ORDER_STATUS_RECEIVED) && orderEntity.getStatus().equals(Common.ORDER_STATUS_DELIVERING)) {
             orderEntity.setStatus(Common.ORDER_STATUS_RECEIVED);
+            orderEntity.getOrderItems().forEach(orderItemEntity -> {
+                orderItemEntity.getProductType().getProduct().setSoldNumber(orderItemEntity.getProductType().getProduct().getSoldNumber() + orderItemEntity.getItemQuantity());
+                productRepository.saveAndFlush(orderItemEntity.getProductType().getProduct());
+            });
         }
         // save order after update to database
         orderEntity = orderRepository.save(orderEntity);

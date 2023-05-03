@@ -202,6 +202,14 @@ public class ProductServiceImpl extends BasePagination<ProductEntity, ProductRep
         return "Xử lý thành công";
     }
 
+    @Override
+    public String updateView(Long productId) {
+        ProductEntity productEntity = productRepository.findById(productId).orElseThrow(Common.productNotFound);
+        productEntity.setView(productEntity.getView() + 1);
+        productEntity = productRepository.save(productEntity);
+        return productEntity.getView().toString();
+    }
+
     private void deleteImage(ProductPayLoadDTO productPayLoadDTO) {
         List<ImageEntity> oldImages = imageRepository.findByProduct(
                 productRepository.findById(productPayLoadDTO.getId())

@@ -28,4 +28,6 @@ public interface ProductService {
     List<ProductResponseDTO> getReportedProducts();
 
     String handleReport(Long productId, String status);
+
+    String updateView(Long productId);
 }
